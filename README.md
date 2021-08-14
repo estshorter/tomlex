@@ -42,7 +42,7 @@ int main(void) {
 	constexpr int argc = 3;
 	constexpr char* argv[argc] = {"PROGRAM_PATH", "  param   =   10000  ", "a.b.c.d  =  nan"};
 	toml::value cfg_cli = tomlex::from_cli(argc, argv);
-	cfg_cli.as_table().merge(cfg.as_table()); // data except for param and a.b.c.d is merged into cfg_cli
+	cfg_cli.as_table().merge(cfg.as_table()); // data except for param and a.b.c.d are merged into cfg_cli
 	cout << cfg_cli << endl;
 
 	tomlex::clear_resolvers();
