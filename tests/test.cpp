@@ -12,7 +12,10 @@ using namespace toml::literals::toml_literals;
 
 char* filename_good;
 char* filename_bad;
-toml::value no_op(toml::value const& args) { return args; };
+
+toml::value no_op(toml::value const& args) {
+	return args;
+};
 
 toml::value add(toml::value const& args) {
 	auto& array_ = args.as_array();
@@ -43,17 +46,17 @@ toml::value join(toml::value const& args, std::string const& sep = "_") {
 class TestEnvironment : public ::testing::Environment {
    public:
 	virtual void SetUp() {
-		tomlex::register_resolver("add", add);
-		tomlex::register_resolver("concat", [](toml::value const& args) { return join(args, ""); });
-		tomlex::register_resolver("join", [](toml::value const& args) { return join(args); });
-		tomlex::register_resolver("no_op", no_op);
+		register_resolver("add", add);
+		register_resolver("concat", [](auto const& args) { return join(args, ""); });
+		register_resolver("join", [](auto const& args) { return join(args); });
+		register_resolver("no_op", no_op);
 	}
 };
 
 class TesttomlextGoodTest : public ::testing::Test {
    public:
 	static void SetUpTestCase() {
-		//std::cout << "good toml file: " << filename_good << std::endl;
+		// std::cout << "good toml file: " << filename_good << std::endl;
 		std::string filename = filename_good;
 		cfg = toml::parse(filename);
 	}
@@ -64,7 +67,7 @@ class TesttomlextBadTest : public ::testing::Test {
    public:
 	// データメンバーの初期化
 	virtual void SetUp() {
-		//std::cout << "bad toml file: " << filename_bad << std::endl;
+		// std::cout << "bad toml file: " << filename_bad << std::endl;
 		std::string filename = filename_bad;
 		cfg = toml::parse(filename);
 	}
@@ -206,12 +209,16 @@ TEST(TesttomlextTest, resolve) {
 }
 
 TEST(TesttomlextTest, from_cli) {
-	char const* const keys[] = {"job_id  =   'hoge'", "a.b.c.d  =  120", "float=1.2"};
+	constexpr char const* const keys[] = {"job_id  =   'hoge'", "a.b.c.d  =  120", "float=1.2"};
 	auto cfg = tomlex::from_cli(3, keys, 0).as_table();
 	auto expect = R"(job_id='hoge'
 a={b={c={d=120}}}
 float=1.2)"_toml.as_table();
 	ASSERT_EQ(cfg, expect);
+	ASSERT_THROW(tomlex::from_cli(3, keys, 3).as_table(), std::runtime_error);
+
+	constexpr char const* const keys2[] = {"10"};
+	ASSERT_THROW(tomlex::from_cli(1, keys2, 0).as_table(), std::runtime_error);
 }
 
 TEST(TesttomlextTest, merge) {
@@ -228,16 +235,17 @@ TEST(TesttomlextTest, merge) {
 }
 
 TEST(TesttomlextTest, clear_resolver) {
+	using tomlex::register_resolver;
 	std::string resolver_name = "__no_op__";
-	tomlex::register_resolver(resolver_name, no_op);
+	register_resolver(resolver_name, no_op);
 
-	auto it = resolvers_.find(resolver_name);
-	ASSERT_NE(it, resolvers_.end());
+	auto it = resolvers_<>.find(resolver_name);
+	ASSERT_NE(it, resolvers_<>.end());
 	tomlex::clear_resolver(resolver_name);
-	it = resolvers_.find(resolver_name);
-	ASSERT_EQ(it, resolvers_.end());
+	it = resolvers_<>.find(resolver_name);
+	ASSERT_EQ(it, resolvers_<>.end());
+	ASSERT_THROW(tomlex::clear_resolver(resolver_name), std::runtime_error);
 }
-
 
 int main(int argc, char* argv[]) {
 	::testing::InitGoogleTest(&argc, argv);

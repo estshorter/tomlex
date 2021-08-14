@@ -12,10 +12,14 @@
 #include <unordered_set>
 #include <vector>
 
+//本当はtoml::valueじゃなくてbasic_valueとテンプレートで頑張るべきだが、
+//テンプレートエラーが辛そうなのでさしあたりtoml::valueに固定しておく
+
 namespace tomlex {
 using std::string;
 using std::string_view;
 using std::vector;
+using toml::basic_value;
 namespace utils {
 
 // https://stackoverflow.com/questions/3418231/replace-part-of-a-string-with-another-string
@@ -67,32 +71,55 @@ inline string_view trim(string_view s, const char* t = ws) { return ltrim(rtrim(
 
 }  // namespace utils
 
-using resolver = std::function<toml::value(toml::value const&)>;
+template <typename C = TOML11_DEFAULT_COMMENT_STRATEGY,
+		  template <typename...> class T = std::unordered_map,
+		  template <typename...> class A = std::vector>
+using resolver = std::function<basic_value<C, T, A>(basic_value<C, T, A> const&)>;
 
-static inline std::unordered_map<string, resolver> resolvers_;
+template <typename C = TOML11_DEFAULT_COMMENT_STRATEGY,
+		  template <typename...> class T = std::unordered_map,
+		  template <typename...> class A = std::vector>
+static inline std::unordered_map<string, resolver<C, T, A>> resolvers_;
 
-void register_resolver(string const& resolver_name, resolver const& func) {
+
+// decay_tしないとうまくオーバーロード解決できないことがあったのでdecayしている
+template <typename C = TOML11_DEFAULT_COMMENT_STRATEGY,
+		  template <typename...> class T = std::unordered_map,
+		  template <typename...> class A = std::vector>
+void register_resolver(string const& resolver_name, std::decay_t<resolver<C, T, A>> const& func) {
 	if (resolver_name.empty()) {
 		throw std::runtime_error("tomlex::register_resolver: empty resolver name");
 	}
-	if (auto it = resolvers_.find(resolver_name); it != resolvers_.end()) {
+	if (auto it = resolvers_<C, T, A>.find(resolver_name); it != resolvers_<C, T, A>.end()) {
 		throw std::runtime_error("tomlex::register_resolver: resolver \"" + resolver_name +
 								 "\" is already registered");
 	}
-	resolvers_[resolver_name] = func;
+	resolvers_<C, T, A>[resolver_name] = func;
 }
 
-void clear_resolvers() { resolvers_.clear(); }
+template <typename C = TOML11_DEFAULT_COMMENT_STRATEGY,
+		  template <typename...> class T = std::unordered_map,
+		  template <typename...> class A = std::vector>
+void clear_resolvers() {
+	resolvers_<C, T, A>.clear();
+}
+
+template <typename C = TOML11_DEFAULT_COMMENT_STRATEGY,
+		  template <typename...> class T = std::unordered_map,
+		  template <typename...> class A = std::vector>
 void clear_resolver(string const& func_name) {
-	if (auto it = resolvers_.find(func_name); it == resolvers_.end()) {
+	if (auto it = resolvers_<C, T, A>.find(func_name); it == resolvers_<C, T, A>.end()) {
 		throw std::runtime_error("tomlex::clear_resolver: specified resolver_name \"" + func_name +
 								 "\" is not found");
 	}
-	resolvers_.erase(func_name);
+	resolvers_<C, T, A>.erase(func_name);
 }
 
-toml::value from_dotted_keys(vector<string> const& key_list) {
-	toml::table table;
+template <typename Comment = TOML11_DEFAULT_COMMENT_STRATEGY,
+		  template <typename...> class Table = std::unordered_map,
+		  template <typename...> class Array = std::vector>
+basic_value<Comment, Table, Array> from_dotted_keys(vector<string> const& key_list) {
+	typename basic_value<Comment, Table, Array>::table_type table;
 	for (const auto& key : key_list) {
 		toml::detail::location loc(key, key);
 		auto val = toml::literals::literal_internal_impl(loc);
@@ -106,7 +133,11 @@ toml::value from_dotted_keys(vector<string> const& key_list) {
 	return table;
 }
 
-toml::value from_cli(const int argc, char const* const argv[], const int first = 1) {
+template <typename Comment = TOML11_DEFAULT_COMMENT_STRATEGY,
+		  template <typename...> class Table = std::unordered_map,
+		  template <typename...> class Array = std::vector>
+basic_value<Comment, Table, Array> from_cli(const int argc, char const* const argv[],
+											const int first = 1) {
 	if (first >= argc) {
 		throw std::runtime_error("tomlex::from_cli: first < argc must be satisfied");
 	}
@@ -115,26 +146,36 @@ toml::value from_cli(const int argc, char const* const argv[], const int first =
 }
 
 namespace detail {
-void resolve_impl(toml::value& val, toml::value const& root_,
-				  std::unordered_set<std::string>& interpolating_);
+template <typename C, template <typename...> class T, template <typename...> class A>
+void resolve_impl(basic_value<C, T, A>& val, basic_value<C, T, A> const& root_,
+				  std::unordered_set<string>& interpolating_);
 }  // namespace detail
 
-toml::value resolve(toml::value&& root_) {
+template <typename C = TOML11_DEFAULT_COMMENT_STRATEGY,
+		  template <typename...> class T = std::unordered_map,
+		  template <typename...> class A = std::vector>
+basic_value<C, T, A> resolve(basic_value<C, T, A>&& root_) {
 	std::unordered_set<string> interpolating_;
 	detail::resolve_impl(root_, root_, interpolating_);
 	return root_;
 }
 
-template <class T>
-toml::value parse(T&& filename) {
-	return tomlex::resolve(toml::parse(std::forward<T>(filename)));
+template <typename C = TOML11_DEFAULT_COMMENT_STRATEGY,
+		  template <typename...> class T = std::unordered_map,
+		  template <typename...> class A = std::vector, class U>
+basic_value<C, T, A> parse(U&& filename) {
+	return tomlex::resolve(toml::parse(std::forward<U>(filename)));
 }
 
 namespace detail {
-toml::value resolve_each(toml::value&& val, toml::value const& root_,
-						 std::unordered_set<string>& interpolating_);
+template <typename C, template <typename...> class T, template <typename...> class A>
+basic_value<C, T, A> resolve_each(basic_value<C, T, A>&& val, basic_value<C, T, A> const& root_,
+								  std::unordered_set<string>& interpolating_);
 
-void resolve_impl(toml::value& val, toml::value const& root_,
+template <typename C = TOML11_DEFAULT_COMMENT_STRATEGY,
+		  template <typename...> class T = std::unordered_map,
+		  template <typename...> class A = std::vector>
+void resolve_impl(basic_value<C, T, A>& val, basic_value<C, T, A> const& root_,
 				  std::unordered_set<string>& interpolating_) {
 	if (!val.is_table()) {
 		return;
@@ -148,8 +189,11 @@ void resolve_impl(toml::value& val, toml::value const& root_,
 	}
 }
 
-toml::value interp(string_view dst, toml::value const& root_,
-				   std::unordered_set<string>& interpolating_) {
+template <typename C = TOML11_DEFAULT_COMMENT_STRATEGY,
+		  template <typename...> class T = std::unordered_map,
+		  template <typename...> class A = std::vector>
+basic_value<C, T, A> interp(string_view dst, basic_value<C, T, A> const& root_,
+							std::unordered_set<string>& interpolating_) {
 	if (dst.empty()) {
 		throw std::runtime_error("tomlex::detail::interp: empty interpolation key");
 	}
@@ -165,13 +209,13 @@ toml::value interp(string_view dst, toml::value const& root_,
 	// stringで返しているので遅いが、toml11のatはstring_viewをとれないのでこれで問題ない
 	auto splitted = utils::split(key, '.');
 
-	toml::value const* node = &root_;
+	basic_value<C, T, A> const* node = &root_;
 	for (auto& item : splitted) {
 		if (!node->contains(item)) {
 			throw std::runtime_error("tomlex::detail::register_resolver: interpolation key \"" +
 									 item + "\" in \"" + key + "\" is not found");
 		}
-		toml::value const& tmp = node->at(item);
+		basic_value<C, T, A> const& tmp = node->at(item);
 		node = &tmp;
 	}
 
@@ -181,14 +225,17 @@ toml::value interp(string_view dst, toml::value const& root_,
 	return result;
 }
 
-toml::value apply_custom_resolver(string_view func_name, toml::value const& arr,
-								  toml::value const& root_,
-								  std::unordered_set<string>& interpolating_) {
+template <typename C = TOML11_DEFAULT_COMMENT_STRATEGY,
+		  template <typename...> class T = std::unordered_map,
+		  template <typename...> class A = std::vector>
+basic_value<C, T, A> apply_custom_resolver(string_view func_name, basic_value<C, T, A> const& arr,
+										   basic_value<C, T, A> const& root_,
+										   std::unordered_set<string>& interpolating_) {
 	if (func_name.empty()) {
 		throw std::runtime_error("tomlex::detail::apply_custom_resolver: empty resolver_name");
 	}
 	std::string key(func_name);
-	if (auto it = resolvers_.find(key); it != resolvers_.end()) {
+	if (auto it = resolvers_<C, T, A>.find(key); it != resolvers_<C, T, A>.end()) {
 		auto func = it->second;
 		auto result = func(arr);
 		return resolve_each(std::move(result), root_, interpolating_);
@@ -196,7 +243,7 @@ toml::value apply_custom_resolver(string_view func_name, toml::value const& arr,
 	std::ostringstream oss;
 	oss << "tomlex::detail::apply_custom_resolver: non-registered resolver: \"" + key + "\", "
 		<< "registered: ";
-	for (const auto& [k, v] : resolvers_) {
+	for (const auto& [k, v] : resolvers_<C, T, A>) {
 		oss << k << ", ";
 	}
 	throw std::runtime_error(oss.str());
@@ -205,14 +252,17 @@ toml::value apply_custom_resolver(string_view func_name, toml::value const& arr,
 template <typename Value>
 toml::result<Value, std::string> parse_value_strict(toml::detail::location& loc);
 
-toml::value to_toml_value(string const& str) {
+template <typename C = TOML11_DEFAULT_COMMENT_STRATEGY,
+		  template <typename...> class T = std::unordered_map,
+		  template <typename...> class A = std::vector>
+basic_value<C, T, A> to_toml_value(string const& str) {
 	if (str.empty()) {
 		throw std::runtime_error(
 			"tomlex::detail::to_toml_value: cannot convert empty string to toml::value");
 	}
 	toml::detail::location loc(str, str);
 	try {
-		auto const result = parse_value_strict<toml::value>(loc);
+		auto const result = parse_value_strict<basic_value<C, T, A>>(loc);
 		if (result.is_err()) {
 			// std::cout << result.as_err() << std::endl;
 			throw std::runtime_error(result.as_err());
@@ -224,7 +274,10 @@ toml::value to_toml_value(string const& str) {
 	}
 }
 
-string to_string(toml::value const& val) {
+template <typename C = TOML11_DEFAULT_COMMENT_STRATEGY,
+		  template <typename...> class T = std::unordered_map,
+		  template <typename...> class A = std::vector>
+string to_string(basic_value<C, T, A> const& val) {
 	std::ostringstream oss;
 	if (val.is_string()) {
 		return val.as_string();
@@ -233,7 +286,7 @@ string to_string(toml::value const& val) {
 	if (val.is_array()) {
 		oss << '[';
 		for (auto const& item : val.as_array()) {
-			oss << to_string(item) << ',';
+			oss << to_string<C, T, A>(item) << ',';
 		}
 		oss.seekp(-1, oss.cur);
 		oss << ']';
@@ -242,7 +295,7 @@ string to_string(toml::value const& val) {
 	if (val.is_table()) {
 		oss << '{';
 		for (auto const& [k, v] : val.as_table()) {
-			oss << to_string(k) << "=" << to_string(v) << ',';
+			oss << to_string<C, T, A>(k) << "=" << to_string<C, T, A>(v) << ',';
 		}
 		oss.seekp(-1, oss.cur);
 		oss << '}';
@@ -260,8 +313,11 @@ string to_string(toml::value const& val) {
 	return ret;
 }
 
-toml::value evaluate(string_view expr, toml::value const& root_,
-					 std::unordered_set<string>& interpolating_) {
+template <typename C = TOML11_DEFAULT_COMMENT_STRATEGY,
+		  template <typename...> class T = std::unordered_map,
+		  template <typename...> class A = std::vector>
+basic_value<C, T, A> evaluate(string_view expr, basic_value<C, T, A> const& root_,
+							  std::unordered_set<string>& interpolating_) {
 	auto pos_first_colon = expr.find(':');
 
 	// コロンがないのでinterp
@@ -274,8 +330,8 @@ toml::value evaluate(string_view expr, toml::value const& root_,
 	// 関数適用
 	string_view func_name = utils::trim(expr.substr(0, pos_first_colon));
 	string_view args = utils::trim(expr.substr(pos_first_colon + 1));
-	auto evaluated =
-		apply_custom_resolver(func_name, to_toml_value(std::string(args)), root_, interpolating_);
+	auto evaluated = apply_custom_resolver(func_name, to_toml_value<C, T, A>(std::string(args)),
+										   root_, interpolating_);
 	return evaluated;
 }
 
@@ -291,9 +347,11 @@ int calc_charsize(unsigned char const lead) {
 	}
 	return 4;
 }
-
-toml::value resolve_each(toml::value&& val, toml::value const& root_,
-						 std::unordered_set<string>& interpolating_) {
+template <typename C = TOML11_DEFAULT_COMMENT_STRATEGY,
+		  template <typename...> class T = std::unordered_map,
+		  template <typename...> class A = std::vector>
+basic_value<C, T, A> resolve_each(basic_value<C, T, A>&& val, basic_value<C, T, A> const& root_,
+								  std::unordered_set<string>& interpolating_) {
 	if (!val.is_string()) {
 		return val;
 	}
@@ -373,15 +431,20 @@ toml::value resolve_each(toml::value&& val, toml::value const& root_,
 	return val;
 }
 
-template <class... Tails>
-toml::value find(toml::value const& root, toml::value const& cfg, Tails&&... keys) {
+template <typename C = TOML11_DEFAULT_COMMENT_STRATEGY,
+		  template <typename...> class T = std::unordered_map,
+		  template <typename...> class A = std::vector, class... Tails>
+basic_value<C, T, A> find(basic_value<C, T, A> const& root, basic_value<C, T, A> const& cfg,
+						  Tails&&... keys) {
 	std::unordered_set<string> interpolating;
 	auto val = toml::find(cfg, std::forward<Tails>(keys)...);
 	return resolve_each(std::move(val), root, interpolating);
 }
 
-template <class... Tails>
-toml::value find_from_root(toml::value const& root, Tails&&... keys) {
+template <typename C = TOML11_DEFAULT_COMMENT_STRATEGY,
+		  template <typename...> class T = std::unordered_map,
+		  template <typename...> class A = std::vector, class... Tails>
+basic_value<C, T, A> find_from_root(basic_value<C, T, A> const& root, Tails&&... keys) {
 	std::unordered_set<string> interpolating;
 	auto val = toml::find(root, std::forward<Tails>(keys)...);
 	return resolve_each(std::move(val), root, interpolating);
