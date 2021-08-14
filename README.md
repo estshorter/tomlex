@@ -131,6 +131,6 @@ If you want to handle it as a string, please surround it with quotation marks
 As with variable interpolation, if a string starts with "${" and ends with "}", the type of the expanded value becomes the same as that of the return-value.
 Otherwise, the type is a string.
 ```toml
-ex1 = "${no_op: 7.0}"  #  7.0  : int
+ex1 = "${no_op: 7.0}"  #  7.0  : float
 ex2 = "${no_op: 7.0}0" # "7.00": string
 ```
