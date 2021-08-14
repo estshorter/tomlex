@@ -98,7 +98,7 @@ toml::value from_dotted_keys(vector<string> const& key_list) {
 	return table;
 }
 
-toml::value from_cli(const int argc, char* const argv[], int first = 1) {
+toml::value from_cli(const int argc, char const* const argv[], const int first = 1) {
 	if (first >= argc) {
 		throw std::runtime_error("tomlex::from_cli: first < argc must be satisfied");
 	}
@@ -207,7 +207,7 @@ toml::value to_toml_value(string const& str) {
 			throw std::runtime_error(result.as_err());
 		}
 		return result.unwrap();
-	} catch (toml::syntax_error e) {
+	} catch (toml::syntax_error& e) {
 		// std::cout << e.what() << std::endl;
 		throw std::runtime_error(e.what());
 	}
@@ -353,7 +353,7 @@ toml::value resolve_each(toml::value const& val, toml::value const& root_,
 		if (!enable_eval) {
 			continue;
 		}
-		//std::cerr << "tomlex: warning while parsing " << val << std::endl
+		// std::cerr << "tomlex: warning while parsing " << val << std::endl
 		//		  << "  \"${\" is found, but \"}\" is missing" << std::endl;
 	}
 	if (resolved) {

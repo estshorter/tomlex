@@ -25,6 +25,9 @@ target_compile_features(tests PRIVATE cxx_std_17)
 # Enable the GoogleTest integration.
 include(GoogleTest)
 
+message("${CMAKE_CURRENT_LIST_DIR}/good.toml")
+message("${CMAKE_CURRENT_LIST_DIR}/bad.toml")
+
 set_target_properties(tests PROPERTIES 
 VS_DEBUGGER_COMMAND_ARGUMENTS "\"${CMAKE_CURRENT_LIST_DIR}/good.toml\" \"${CMAKE_CURRENT_LIST_DIR}/bad.toml\"")
 

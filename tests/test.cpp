@@ -29,7 +29,7 @@ toml::value join(toml::value const& args, std::string const& sep = "_") {
 		case toml::value_t::array: {
 			auto& array_ = args.as_array();
 			std::ostringstream oss;
-			for (int i = 0; i < array_.size() - 1; i++) {
+			for (decltype(array_.size()) i = 0; i < array_.size() - 1; i++) {
 				oss << tomlex::detail::to_string(array_[i]) << sep;
 			}
 			oss << tomlex::detail::to_string(array_[array_.size() - 1]);
@@ -44,10 +44,8 @@ class TestEnvironment : public ::testing::Environment {
    public:
 	virtual void SetUp() {
 		tomlex::register_resolver("add", add);
-		tomlex::register_resolver(
-			"concat", [](toml::value const& args) { return join(args, ""); });
-		tomlex::register_resolver("join",
-								  [](toml::value const& args) { return join(args); });
+		tomlex::register_resolver("concat", [](toml::value const& args) { return join(args, ""); });
+		tomlex::register_resolver("join", [](toml::value const& args) { return join(args); });
 		tomlex::register_resolver("no_op", no_op);
 	}
 };
@@ -140,13 +138,12 @@ TEST_F(TesttomlextGoodTest, array_of_array) {
 
 TEST_F(TesttomlextGoodTest, table) {
 	auto result = find_from_root(cfg, "table_");
-	EXPECT_TRUE(result.is_table());
-	EXPECT_EQ(tomlex::detail::to_string(result), "{x=1,y=2}");
+	EXPECT_EQ(result.as_table(), "{x=1,y=2}"_toml.as_table());
 	result = find_from_root(cfg, "table_test");
-	EXPECT_TRUE(result.is_table());
-	EXPECT_EQ(tomlex::detail::to_string(result), "{x=1,y=2}");
+	EXPECT_EQ(result.as_table(), "{x=1,y=2}"_toml.as_table());
 	result = find_from_root(cfg, "table_cat");
-	EXPECT_EQ(result.as_string(), "{x=1,y=2}1");
+	auto table_str = tomlex::detail::to_string("{x=1,y=2}"_toml);
+	EXPECT_EQ(result.as_string(), table_str + "1");
 }
 
 TEST_F(TesttomlextGoodTest, bool_) {
@@ -209,7 +206,7 @@ TEST(TesttomlextTest, resolve) {
 }
 
 TEST(TesttomlextTest, from_cli) {
-	char* keys[] = {"job_id  =   'hoge'", "a.b.c.d  =  120", "float=1.2"};
+	char const* const keys[] = {"job_id  =   'hoge'", "a.b.c.d  =  120", "float=1.2"};
 	auto cfg = tomlex::from_cli(3, keys, 0).as_table();
 	auto expect = R"(job_id='hoge'
 a={b={c={d=120}}}
@@ -232,6 +229,7 @@ TEST(TesttomlextTest, merge) {
 
 int main(int argc, char* argv[]) {
 	::testing::InitGoogleTest(&argc, argv);
+	std::cout << argv[1] << std::endl;
 	filename_good = argv[1];
 	filename_bad = argv[2];
 

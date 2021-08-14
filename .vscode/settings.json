@@ -1,0 +1,6 @@
+{
+    "cmake.configureArgs": [
+        "-Dtomlex_BUILD_TEST=ON"
+    ],
+    "cmake.generator": "Ninja"
+}
