@@ -112,7 +112,7 @@ This is because an argument string (e.g. "[10,20,30]") is passed to a toml parse
 
 Also, please be careful of the type of arguments, because this library just replaces "${EXPR}" with the expanded string and parse it.
 
-example:
+Examples:
 ``` toml
 flt1 = 7.0
 str1 = "7.0"
@@ -128,7 +128,7 @@ conv_str2 = '${no_op: "${str1}"}' # ${no_op: "7.0"} -> "7.0": str
 ${fit1} and ${str1} are expanded as 7.0 and interpreted as float.
 If you want to handle it as a string, please surround it with quotation marks 
 
-As with variable interpolation, if a string starts with "${" and ends with "}", the type of the expanded value becomes the same as that of the reference value.
+As with variable interpolation, if a string starts with "${" and ends with "}", the type of the expanded value becomes the same as that of the return-value.
 Otherwise, the type is a string.
 ```toml
 ex1 = "${no_op: 7.0}"  #  7.0  : int
