@@ -80,6 +80,7 @@ bar = "${param}0" # "100": string, NOT int
 ### Custom resolvers
 Examples:
 ```cpp
+//function definition
 toml::value join(toml::value const& args, std::string const& sep = "_") {
     switch (args.type()) {
         case toml::value_t::array: {
@@ -94,7 +95,10 @@ toml::value join(toml::value const& args, std::string const& sep = "_") {
         default:
             return args;
     }
-}tomlex::register_resolver("join_", [](toml::value const& args) { return join(args); });
+}
+
+//register
+tomlex::register_resolver("join_", [](toml::value const& args) { return join(args); });
 ```
 
 ```toml
