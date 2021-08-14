@@ -353,8 +353,8 @@ toml::value resolve_each(toml::value const& val, toml::value const& root_,
 		if (!enable_eval) {
 			continue;
 		}
-		std::cerr << "tomlex: warning while parsing " << val << std::endl
-				  << "  \"${\" is found, but \"}\" is missing" << std::endl;
+		//std::cerr << "tomlex: warning while parsing " << val << std::endl
+		//		  << "  \"${\" is found, but \"}\" is missing" << std::endl;
 	}
 	if (resolved) {
 		return toml::value(value_str);
