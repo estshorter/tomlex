@@ -8,6 +8,7 @@
 using std::string;
 using namespace tomlex;
 using tomlex::detail::find_from_root;
+using namespace toml::literals::toml_literals;
 
 char* filename_good;
 char* filename_bad;
@@ -202,10 +203,31 @@ TEST_F(TesttomlextBadTest, bad) {
 }
 
 TEST(TesttomlextTest, resolve) {
-	using namespace toml::literals::toml_literals;
 	auto cfg = R"(d='${no_op:["${concat: ["A","B","C"]}", "D"]}')"_toml;
 	cfg = tomlex::resolve(std::move(cfg));
-	EXPECT_EQ(tomlex::detail::to_string(cfg), R"({d=[ABC,D]})");
+	ASSERT_EQ(tomlex::detail::to_string(cfg), R"({d=[ABC,D]})");
+}
+
+TEST(TesttomlextTest, from_cli) {
+	char* keys[] = {"job_id  =   'hoge'", "a.b.c.d  =  120", "float=1.2"};
+	auto cfg = tomlex::from_cli(3, keys, 0).as_table();
+	auto expect = R"(job_id='hoge'
+a={b={c={d=120}}}
+float=1.2)"_toml.as_table();
+	ASSERT_EQ(cfg, expect);
+}
+
+TEST(TesttomlextTest, merge) {
+	auto base = R"(val=1)"_toml.as_table();
+	ASSERT_EQ(base["val"].as_integer(), 1);
+	auto modified = R"(val=1000)"_toml.as_table();
+	ASSERT_EQ(modified["val"].as_integer(), 1000);
+
+	base.merge(modified);
+	ASSERT_EQ(base["val"].as_integer(), 1);
+
+	modified.merge(std::move(base));
+	ASSERT_EQ(modified["val"].as_integer(), 1000);
 }
 
 int main(int argc, char* argv[]) {

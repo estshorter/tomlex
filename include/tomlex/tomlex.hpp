@@ -83,6 +83,29 @@ void register_resolver(string const& func_name, resolver const& func) {
 
 void clear_resolvers() { resolvers_.clear(); }
 
+toml::value from_dotted_keys(vector<string> const& key_list) {
+	toml::table table;
+	for (const auto& key : key_list) {
+		toml::detail::location loc(key, key);
+		auto val = toml::literals::literal_internal_impl(loc);
+		if (!val.is_table()) {
+			std::ostringstream oss;
+			oss << "cannot recognize as a table: \"" << val << "\"";
+			throw std::runtime_error(oss.str());
+		}
+		table.merge(std::move(val.as_table()));
+	}
+	return table;
+}
+
+toml::value from_cli(const int argc, char* const argv[], int first = 1) {
+	if (first >= argc) {
+		throw std::runtime_error("tomlex::from_cli: first < argc must be satisfied");
+	}
+	std::vector<std::string> arg_list(argv + first, argv + argc);
+	return from_dotted_keys(arg_list);
+}
+
 namespace detail {
 void resolve_impl(toml::value& val, toml::value const& root_,
 				  std::unordered_set<std::string>& interpolating_);
@@ -217,7 +240,7 @@ string to_string(toml::value const& val) {
 	oss << val;
 	auto ret = oss.str();
 
-	//if (val.is_floating()) {
+	// if (val.is_floating()) {
 	//	auto val_float = (val.as_floating());
 	//	if (std::isnan(val_float) || std::isinf(val_float)) {
 	//		ret.erase(ret.size() - 2, 2);  // remvoe ".0" from "nan.0" and "inf.0"

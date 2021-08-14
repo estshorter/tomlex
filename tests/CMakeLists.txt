@@ -10,7 +10,7 @@ FetchContent_MakeAvailable(googletest)
 # Enable the testing features.
 enable_testing()
 
-add_executable(tests test.cpp)
+add_executable(tests test.cpp ../include/tomlex/tomlex.hpp ../include/tomlex/resolvers.hpp)
 target_include_directories(tests PRIVATE ../include ../include/toml11)
 target_precompile_headers(tests PRIVATE pch.h)
 target_link_libraries(tests gtest_main)
