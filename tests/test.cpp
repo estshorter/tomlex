@@ -229,7 +229,6 @@ TEST(TesttomlextTest, merge) {
 
 int main(int argc, char* argv[]) {
 	::testing::InitGoogleTest(&argc, argv);
-	std::cout << argv[1] << std::endl;
 	filename_good = argv[1];
 	filename_bad = argv[2];
 
