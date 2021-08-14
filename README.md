@@ -8,7 +8,7 @@ Currently, the following functions are implemented.
 3. [Custom resolvers](https://omegaconf.readthedocs.io/en/latest/custom_resolvers.html)
 
 ## Install
-include the `include/tomlex/` directory in your project.
+Please include the `include/tomlex/` directory in your project.
 Note that this library requires C++17 or upper and depends on [toml11](https://github.com/ToruNiina/toml11).
 
 ## Usage
