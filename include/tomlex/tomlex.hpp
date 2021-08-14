@@ -75,13 +75,13 @@ void register_resolver(string const& func_name, resolver const& func) {
 		throw std::runtime_error("tomlex::register_resolver: empty resolver name");
 	}
 	if (auto it = resolvers_.find(func_name); it != resolvers_.end()) {
-		throw std::runtime_error("tomlex::register_resolver: resolver '" + func_name +
-								 "' is already registered");
+		throw std::runtime_error("tomlex::register_resolver: resolver \"" + func_name +
+								 "\" is already registered");
 	}
 	resolvers_[func_name] = func;
 }
 
-void clear_resolver() { resolvers_.clear(); }
+void clear_resolvers() { resolvers_.clear(); }
 
 namespace detail {
 void resolve_impl(toml::value& val, toml::value const& root_,
@@ -126,7 +126,8 @@ toml::value interp(string_view dst, toml::value const& root_,
 	std::string key(dst);
 	if (interpolating_.find(key) != interpolating_.end()) {
 		throw std::runtime_error(
-			"tomlex::detail::register_resolver: circular reference detected: keyword: " + key);
+			"tomlex::detail::register_resolver: circular reference detected: keyword: \"" + key +
+			"\"");
 	}
 	interpolating_.insert(key);
 
@@ -135,11 +136,9 @@ toml::value interp(string_view dst, toml::value const& root_,
 
 	toml::value const* node = &root_;
 	for (auto& item : splitted) {
-		auto item_ = utils::trim(item);
-		item = std::string(item_);
 		if (!node->contains(item)) {
-			throw std::runtime_error("tomlex::detail::register_resolver: interpolation key '" +
-									 item + "' in '" + key + "' is not found");
+			throw std::runtime_error("tomlex::detail::register_resolver: interpolation key \"" +
+									 item + "\" in \"" + key + "\" is not found");
 		}
 		toml::value const& tmp = node->at(item);
 		node = &tmp;
@@ -161,7 +160,7 @@ toml::value apply_custom_resolver(string_view func_name, toml::value const& arr,
 		return resolve_each(func(arr), root_, interpolating_);
 	}
 	std::ostringstream oss;
-	oss << "tomlex::detail::apply_custom_resolver: non-registered resolver: '" + key + "', "
+	oss << "tomlex::detail::apply_custom_resolver: non-registered resolver: \"" + key + "\", "
 		<< "registered: ";
 	for (const auto& [k, v] : resolvers_) {
 		oss << k << ", ";
@@ -301,6 +300,7 @@ toml::value resolve_each(toml::value const& val, toml::value const& root_,
 						evaluate(string_view{&(*(left + 1)),
 											 static_cast<size_t>(std::distance(left + 1, it))},
 								 root_, interpolating_);
+					// パースする文字列の先頭が"${"で後端が"}"の場合は、toml::valueをそのまま返す
 					if ((left - 1) == value_str.begin() && (it + 1) == value_str.end()) {
 						return evaluated;
 					}
@@ -314,8 +314,7 @@ toml::value resolve_each(toml::value const& val, toml::value const& root_,
 					std::ostringstream oss;
 					auto err = std::string(e.what());
 					utils::replace_all(err, "\n", "\n  ");
-					oss << "error while processing '" << to_string(val) << "'" << std::endl
-						<< "  " << err;
+					oss << "error while processing " << val << std::endl << "  " << err;
 					throw std::runtime_error(oss.str());
 				}
 				break;
@@ -331,7 +330,8 @@ toml::value resolve_each(toml::value const& val, toml::value const& root_,
 		if (!enable_eval) {
 			continue;
 		}
-		std::cerr << "tomlex: warning: '${' is found, but '}' is missing" << std::endl;
+		std::cerr << "tomlex: warning while parsing " << val << std::endl
+				  << "  \"${\" is found, but \"}\" is missing" << std::endl;
 	}
 	if (resolved) {
 		return toml::value(value_str);
