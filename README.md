@@ -50,7 +50,7 @@ int main(void) {
 ```
 
 ### Variable interpolation
-You can specify another value by specifying "${dotted-key}".
+You can specify another value by "${dotted-key}".
 Currently, an absolute path is allowed.
 
 Examples:
@@ -59,9 +59,9 @@ job_id = "TEST"
 param = 10
 output_filepath = "output_${job_id}_${param}.bin" # "output_TEST_10.bin"
 test = "${a.b.c.d}"                               # 10: int
-#test = "${   a.b.c.d   }"                        # OK: leading and trailing space is allowed
-#test = "${a.    b.c.d}"                          # NG: surrounding with quotation marks is NOT allowed
-#test = "${'a.b.c.d'}"                            # NG: relative path is NOT allowed
+#test = "${   a.b.c.d   }"                        # OK: leading and trailing spaces are allowed
+#test = "${a.    b.c.d}"                          # NG: spaces before or after dot are NOT allowed
+#test = "${'a.b.c.d'}"                            # NG: surrounding with quotation marks is NOT allowed
 
 [a.b.c]
 d = 10
@@ -73,8 +73,8 @@ the type of the expanded value is the same as that of the reference value.
 Otherwise, the type is a string.
 ```toml
 param = 10
-foo = "{param}"  # 10: int
-bar = "{param}0" # "100": string, NOT int
+foo = "${param}"  # 10: int
+bar = "${param}0" # "100": string, NOT int
 ```
 
 ### Custom resolvers
@@ -99,7 +99,7 @@ toml::value join(toml::value const& args, std::string const& sep = "_") {
 
 ```toml
 output_filepath =  "output_${join_: [10,20,30]}.bin"             # "output_0_10_20.bin"
-#output_filepath2 =  "output_${   join   :   [10,20,30]  }.bin"  # OK: leading and trailing space is allowed
+#output_filepath2 =  "output_${   join   :   [10,20,30]  }.bin"  # OK: leading and trailing spaces are allowed
 #output_filepath3 =  "output_${join: 10,20}.bin"                 # NG: 10,20 is not a valid toml value
 ```
 Note that arguments for the resolver must be a valid toml-value.
