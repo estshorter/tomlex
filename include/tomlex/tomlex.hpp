@@ -71,18 +71,25 @@ using resolver = std::function<toml::value(toml::value const&)>;
 
 static inline std::unordered_map<string, resolver> resolvers_;
 
-void register_resolver(string const& func_name, resolver const& func) {
-	if (func_name.empty()) {
+void register_resolver(string const& resolver_name, resolver const& func) {
+	if (resolver_name.empty()) {
 		throw std::runtime_error("tomlex::register_resolver: empty resolver name");
 	}
-	if (auto it = resolvers_.find(func_name); it != resolvers_.end()) {
-		throw std::runtime_error("tomlex::register_resolver: resolver \"" + func_name +
+	if (auto it = resolvers_.find(resolver_name); it != resolvers_.end()) {
+		throw std::runtime_error("tomlex::register_resolver: resolver \"" + resolver_name +
 								 "\" is already registered");
 	}
-	resolvers_[func_name] = func;
+	resolvers_[resolver_name] = func;
 }
 
 void clear_resolvers() { resolvers_.clear(); }
+void clear_resolver(string const& func_name) {
+	if (auto it = resolvers_.find(func_name); it == resolvers_.end()) {
+		throw std::runtime_error("tomlex::clear_resolver: specified resolver_name \"" + func_name +
+								 "\" is not found");
+	}
+	resolvers_.erase(func_name);
+}
 
 toml::value from_dotted_keys(vector<string> const& key_list) {
 	toml::table table;
@@ -178,7 +185,7 @@ toml::value apply_custom_resolver(string_view func_name, toml::value const& arr,
 								  toml::value const& root_,
 								  std::unordered_set<string>& interpolating_) {
 	if (func_name.empty()) {
-		throw std::runtime_error("tomlex::detail::apply_custom_resolver: empty func_name");
+		throw std::runtime_error("tomlex::detail::apply_custom_resolver: empty resolver_name");
 	}
 	std::string key(func_name);
 	if (auto it = resolvers_.find(key); it != resolvers_.end()) {

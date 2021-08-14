@@ -53,7 +53,7 @@ class TestEnvironment : public ::testing::Environment {
 class TesttomlextGoodTest : public ::testing::Test {
    public:
 	static void SetUpTestCase() {
-		std::cout << "good toml file: " << filename_good << std::endl;
+		//std::cout << "good toml file: " << filename_good << std::endl;
 		std::string filename = filename_good;
 		cfg = toml::parse(filename);
 	}
@@ -64,7 +64,7 @@ class TesttomlextBadTest : public ::testing::Test {
    public:
 	// データメンバーの初期化
 	virtual void SetUp() {
-		std::cout << "bad toml file: " << filename_bad << std::endl;
+		//std::cout << "bad toml file: " << filename_bad << std::endl;
 		std::string filename = filename_bad;
 		cfg = toml::parse(filename);
 	}
@@ -226,6 +226,18 @@ TEST(TesttomlextTest, merge) {
 	modified.merge(std::move(base));
 	ASSERT_EQ(modified["val"].as_integer(), 1000);
 }
+
+TEST(TesttomlextTest, clear_resolver) {
+	std::string resolver_name = "__no_op__";
+	tomlex::register_resolver(resolver_name, no_op);
+
+	auto it = resolvers_.find(resolver_name);
+	ASSERT_NE(it, resolvers_.end());
+	tomlex::clear_resolver(resolver_name);
+	it = resolvers_.find(resolver_name);
+	ASSERT_EQ(it, resolvers_.end());
+}
+
 
 int main(int argc, char* argv[]) {
 	::testing::InitGoogleTest(&argc, argv);
