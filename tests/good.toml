@@ -1,0 +1,71 @@
+interp1 = "${owner.name}"                        # estshorter
+interp2 = "${   owner.name   }"                  # estshorter
+resolver1 = "${add:[1,2]}"                       # 3
+resolver2 = '${  concat  :  [  "a" ,  "b  " ] }' # "ab  "
+resolver3 = '${concat:["a","b"]}'                # "ab"
+resolver4 = '^${concat:["a","b"]}/c%'            # "^ab/c%"
+resolver_interp1 = '${add:[1,${num1}]}'          # 2
+resolver_interp2 = '${${add}:[1,${num1}]}'       # 2
+resolver_interp3 = '${num1${add:[1,1]}}'         # 12
+
+num1 = 1
+num12 = 12
+add = "add"
+
+# belows are regarded as just strings
+raw_string1_ = "&{"
+raw_string2_ = "{hogehoge}"
+raw_string3_ = "[hogehoge]"
+raw_string4_ = "[[hogehoge]]"
+raw_string1 = "${raw_string1_}"
+raw_string2 = "${raw_string2_}"
+raw_string3 = "${raw_string3_}"
+raw_string4 = "${raw_string4_}"
+
+arr = [0, 1, 2]
+arr_str = "[0,1,2]"
+arr_joined = "${join: ${arr}}" # "0_1_2"
+arr_interp = "${arr}"
+arr_cat = "${arr}a"
+arr_str_ = '${arr_str}'
+arr_str_2 = "${arr_str}"
+
+arrarr = [[0, 1], [2, 3]]
+arrarr_ = "${no_op: [[0, 1], [2, 3]]}"
+
+table = { x = 1, y = 2 }
+table_ = "${table}"
+table_test = "${no_op: {x=1,y=2}}"
+table_cat = "${table}1"
+
+bool = true
+bool_ = "${no_op: ${bool}}"
+bool_cat = "${bool}A"
+
+int = 10
+int_cat = "${int} A"
+
+float = 11.0
+float_cat = "${float}A"
+
+nan = nan
+nan_ = "${nan}"
+nan_cat = "${nan}A"
+
+inf = inf
+inf_ = "${inf}"
+inf_cat = "${inf}H"
+
+
+ld = 1979-05-27
+lt = 07:32:00
+ldt = 1979-05-27T07:32:00
+oft = 1979-05-27T00:32:00.999999-07:00
+date_ = "${no_op: [${oft}, ${ldt}, ${ld}, ${lt}]}"
+ld_cat = "${ld} a"
+lt_cat = "${lt} a"
+ldt_cat = "${ldt} a"
+oft_cat = "${oft} a"
+
+[owner]
+name = "estshorter"

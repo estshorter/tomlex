@@ -1,0 +1,9 @@
+# raise runtime_error
+empty_throw = "${}"
+
+# circular reference
+circular1 = "${circular2}"
+circular2 = "${circular3}"
+circular3 = "${circular1}"
+
+missing_quotation = '${join: [a","b","c"]}'
