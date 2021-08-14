@@ -3,7 +3,7 @@
 
 Currently, the following functions are implemented.
 
-1. [`tomlex::from_cli()`]()
+1. `tomlex::from_cli()`
 2. [Variable interpolation](https://omegaconf.readthedocs.io/en/latest/usage.html#interpolation)
 3. [Custom resolvers](https://omegaconf.readthedocs.io/en/latest/custom_resolvers.html)
 
