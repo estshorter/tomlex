@@ -134,3 +134,10 @@ Otherwise, the type is a string.
 ex1 = "${no_op: 7.0}"  #  7.0  : float
 ex2 = "${no_op: 7.0}0" # "7.00": string
 ```
+#### resolvers in the library
+`tomlex/resolver.hpp` provides resolvers: `tomlex::resolvers::decode` and `tomlex::resolvers::env`.
+
+`decode` interprets an returns returns it an argument as a toml value if the argument is string.
+`env` returns an environment variable.
+
+Note that these functions are not registered by default.
