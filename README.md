@@ -9,7 +9,7 @@ Currently, the following functions are implemented.
 
 ## Install
 include the `include/tomlex/` directory in your project.
-Note that this library depends on [toml11](https://github.com/ToruNiina/toml11).
+Note that this library requires C++17 or upper and depends on [toml11](https://github.com/ToruNiina/toml11).
 
 ## Usage
 ### simple usage
