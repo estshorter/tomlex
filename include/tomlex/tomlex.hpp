@@ -123,7 +123,7 @@ toml::value parse(T&& filename) {
 }
 
 namespace detail {
-toml::value resolve_each(toml::value const& val, toml::value const& root_,
+toml::value resolve_each(toml::value&& val, toml::value const& root_,
 						 std::unordered_set<string>& interpolating_);
 
 void resolve_impl(toml::value& val, toml::value const& root_,
@@ -133,7 +133,7 @@ void resolve_impl(toml::value& val, toml::value const& root_,
 	}
 	for (auto& [k, v] : val.as_table()) {
 		if (v.is_string()) {
-			val[k] = resolve_each(v, root_, interpolating_);
+			val[k] = resolve_each(std::move(v), root_, interpolating_);
 		} else if (v.is_table()) {
 			resolve_impl(v, root_, interpolating_);
 		}
@@ -166,9 +166,11 @@ toml::value interp(string_view dst, toml::value const& root_,
 		toml::value const& tmp = node->at(item);
 		node = &tmp;
 	}
-	toml::value ret = resolve_each(*node, root_, interpolating_);
+
+	auto ret = *node;
+	auto result = resolve_each(std::move(ret), root_, interpolating_);
 	interpolating_.erase(key);
-	return ret;
+	return result;
 }
 
 toml::value apply_custom_resolver(string_view func_name, toml::value const& arr,
@@ -180,7 +182,8 @@ toml::value apply_custom_resolver(string_view func_name, toml::value const& arr,
 	std::string key(func_name);
 	if (auto it = resolvers_.find(key); it != resolvers_.end()) {
 		auto func = it->second;
-		return resolve_each(func(arr), root_, interpolating_);
+		auto result = func(arr);
+		return resolve_each(std::move(result), root_, interpolating_);
 	}
 	std::ostringstream oss;
 	oss << "tomlex::detail::apply_custom_resolver: non-registered resolver: \"" + key + "\", "
@@ -281,7 +284,7 @@ int calc_charsize(unsigned char const lead) {
 	return 4;
 }
 
-toml::value resolve_each(toml::value const& val, toml::value const& root_,
+toml::value resolve_each(toml::value&& val, toml::value const& root_,
 						 std::unordered_set<string>& interpolating_) {
 	if (!val.is_string()) {
 		return val;
