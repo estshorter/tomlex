@@ -368,13 +368,15 @@ toml::value resolve_each(toml::value&& val, toml::value const& root_,
 template <class... Tails>
 toml::value find(toml::value const& root, toml::value const& cfg, Tails&&... keys) {
 	std::unordered_set<string> interpolating;
-	return resolve_each(toml::find(cfg, std::forward<Tails>(keys)...), root, interpolating);
+	auto val = toml::find(cfg, std::forward<Tails>(keys)...);
+	return resolve_each(std::move(val), root, interpolating);
 }
 
 template <class... Tails>
 toml::value find_from_root(toml::value const& root, Tails&&... keys) {
 	std::unordered_set<string> interpolating;
-	return resolve_each(toml::find(root, std::forward<Tails>(keys)...), root, interpolating);
+	auto val = toml::find(root, std::forward<Tails>(keys)...);
+	return resolve_each(std::move(val), root, interpolating);
 }
 
 // following code is derived from toml11
