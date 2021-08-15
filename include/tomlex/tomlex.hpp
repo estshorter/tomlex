@@ -82,11 +82,11 @@ template <typename C = TOML11_DEFAULT_COMMENT_STRATEGY,
 static inline std::unordered_map<string, resolver<C, T, A>> resolvers_;
 
 
-// decay_tしないとうまくオーバーロード解決できないことがあったのでdecayしている
+// decay_tしないとうまくオーバーロード解決できない
 template <typename C = TOML11_DEFAULT_COMMENT_STRATEGY,
 		  template <typename...> class T = std::unordered_map,
 		  template <typename...> class A = std::vector>
-void register_resolver(string const& resolver_name, std::decay_t<resolver<C, T, A>> const& func) {
+void register_resolver(string const& resolver_name, std::decay_t<resolver<C, T, A>> const func) {
 	if (resolver_name.empty()) {
 		throw std::runtime_error("tomlex::register_resolver: empty resolver name");
 	}
