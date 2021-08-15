@@ -13,11 +13,7 @@
 #include <vector>
 
 namespace tomlex {
-using std::string;
-using std::string_view;
-using std::vector;
 namespace utils {
-
 // https://stackoverflow.com/questions/3418231/replace-part-of-a-string-with-another-string
 void replace_all(std::string& str, const std::string& from, const std::string& to) {
 	if (from.empty()) return;
@@ -28,14 +24,14 @@ void replace_all(std::string& str, const std::string& from, const std::string& t
 	}
 }
 
-inline vector<std::string> split(const string& str, const char delim) {
+inline std::vector<std::string> split(const std::string& str, const char delim) {
 	if (str.empty()) {
 		return {""};
 	}
 
-	vector<string> res;
+	std::vector<std::string> res;
 	std::istringstream ss(str);
-	string buffer;
+	std::string buffer;
 	while (std::getline(ss, buffer, delim)) {
 		res.push_back(buffer);
 	}
@@ -47,7 +43,7 @@ inline vector<std::string> split(const string& str, const char delim) {
 
 constexpr auto ws = " \t\n\r\f\v";
 
-inline string_view rtrim(string_view s, const char* t = ws) {
+inline std::string_view rtrim(std::string_view s, const char* t = ws) {
 	auto pos = s.find_last_not_of(t);
 	if (pos == std::string::npos) {
 		s.remove_suffix(s.size());
@@ -57,38 +53,38 @@ inline string_view rtrim(string_view s, const char* t = ws) {
 	return s;
 }
 
-inline string_view ltrim(string_view s, const char* t = ws) {
+inline std::string_view ltrim(std::string_view s, const char* t = ws) {
 	auto pos = std::min(s.find_first_not_of(t), s.size());
 	s.remove_prefix(pos);
 	return s;
 }
 
-inline string_view trim(string_view s, const char* t = ws) { return ltrim(rtrim(s, t), t); }
+inline std::string_view trim(std::string_view s, const char* t = ws) { return ltrim(rtrim(s, t), t); }
 
 }  // namespace utils
 
 // foward decl
 namespace detail {
 template <typename Value>
-void resolve_impl(Value& val, Value const& root_, std::unordered_set<string>& interpolating_);
+void resolve_impl(Value& val, Value const& root_, std::unordered_set<std::string>& interpolating_);
 template <typename Value>
 Value parse_toml_literal(toml::detail::location loc);
 }  // namespace detail
 
 template <typename Value = toml::value>
-using resolver = std::function<Value(Value const&)>;
+using resolver_type = std::function<Value(Value&&)>;
 
 template <typename Value = toml::value>
-static inline std::unordered_map<string, resolver<Value>> resolver_table;
+static inline std::unordered_map<std::string, resolver_type<Value>> resolver_table;
 
 // decay_tしないとうまくオーバーロード解決できない
 template <typename Value = toml::value>
-void register_resolver(string const& resolver_name, std::decay_t<resolver<Value>> const func) {
+void register_resolver(std::string const& resolver_name, std::decay_t<resolver_type<Value>> const func) {
 	if (resolver_name.empty()) {
-		throw std::runtime_error("tomlex::register_resolver: empty resolver name");
+		throw std::runtime_error("tomlex::register_resolver: empty resolver_type name");
 	}
 	if (auto it = resolver_table<Value>.find(resolver_name); it != resolver_table<Value>.end()) {
-		throw std::runtime_error("tomlex::register_resolver: resolver \"" + resolver_name +
+		throw std::runtime_error("tomlex::register_resolver: resolver_type \"" + resolver_name +
 								 "\" is already registered");
 	}
 	resolver_table<Value>[resolver_name] = func;
@@ -100,7 +96,7 @@ void clear_resolvers() {
 }
 
 template <typename Value = toml::value>
-void clear_resolver(string const& func_name) {
+void clear_resolver(std::string const& func_name) {
 	if (auto it = resolver_table<Value>.find(func_name); it == resolver_table<Value>.end()) {
 		throw std::runtime_error("tomlex::clear_resolver: specified resolver_name \"" + func_name +
 								 "\" is not found");
@@ -109,7 +105,7 @@ void clear_resolver(string const& func_name) {
 }
 
 template <typename Value = toml::value>
-Value from_dotted_keys(vector<string> const& key_list) {
+Value from_dotted_keys(std::vector<std::string> const& key_list) {
 	typename Value::table_type table;
 	for (const auto& key : key_list) {
 		toml::detail::location loc(key, key);
@@ -135,7 +131,7 @@ Value from_cli(const int argc, char const* const argv[], const int first = 1) {
 
 template <typename Value = toml::value>
 Value resolve(Value&& root_) {
-	std::unordered_set<string> interpolating_;
+	std::unordered_set<std::string> interpolating_;
 	detail::resolve_impl(root_, root_, interpolating_);
 	return root_;
 }
@@ -146,16 +142,16 @@ Value parse(U&& filename) {
 
 namespace detail {
 template <typename Value>
-Value resolve_each(Value&& val, Value const& root_, std::unordered_set<string>& interpolating_);
+Value resolve_each(Value&& val, Value const& root_, std::unordered_set<std::string>& interpolating_);
 
 template <typename Value>
-void resolve_impl(Value& val, Value const& root_, std::unordered_set<string>& interpolating_) {
+void resolve_impl(Value& val, Value const& root_, std::unordered_set<std::string>& interpolating_) {
 	if (!val.is_table()) {
 		return;
 	}
 	for (auto& [k, v] : val.as_table()) {
 		if (v.is_string()) {
-			val[k] = resolve_each(std::move(v), root_, interpolating_);
+			val[k] = std::move(resolve_each(std::move(v), root_, interpolating_));
 		} else if (v.is_table()) {
 			resolve_impl(v, root_, interpolating_);
 		}
@@ -163,7 +159,7 @@ void resolve_impl(Value& val, Value const& root_, std::unordered_set<string>& in
 }
 
 template <typename Value>
-Value interp(string_view dst, Value const& root_, std::unordered_set<string>& interpolating_) {
+Value interp(std::string_view dst, Value const& root_, std::unordered_set<std::string>& interpolating_) {
 	if (dst.empty()) {
 		throw std::runtime_error("tomlex::detail::interp: empty interpolation key");
 	}
@@ -176,7 +172,7 @@ Value interp(string_view dst, Value const& root_, std::unordered_set<string>& in
 	}
 	interpolating_.insert(key);
 
-	// stringで返しているので遅いが、toml11のatはstring_viewをとれないのでこれで問題ない
+	// stringで返しているので遅いが、toml11のatはstd::string_viewをとれないのでこれで問題ない
 	auto splitted = utils::split(key, '.');
 
 	Value const* node = &root_;
@@ -188,27 +184,26 @@ Value interp(string_view dst, Value const& root_, std::unordered_set<string>& in
 		Value const& tmp = node->at(item);
 		node = &tmp;
 	}
-
-	auto ret = *node;
+	Value ret = *node; //copy 
 	Value result = resolve_each(std::move(ret), root_, interpolating_);
 	interpolating_.erase(key);
 	return result;
 }
 
 template <typename Value>
-Value apply_custom_resolver(string_view func_name, Value const& arr, Value const& root_,
-							std::unordered_set<string>& interpolating_) {
+Value apply_custom_resolver(std::string_view func_name, Value && arr, Value const& root_,
+							std::unordered_set<std::string>& interpolating_) {
 	if (func_name.empty()) {
 		throw std::runtime_error("tomlex::detail::apply_custom_resolver: empty resolver_name");
 	}
 	std::string key(func_name);
 	if (auto it = resolver_table<Value>.find(key); it != resolver_table<Value>.end()) {
-		auto func = it->second;
-		auto result = func(arr);
+		resolver_type<Value> func = it->second;
+		Value result = func(std::move(arr));
 		return resolve_each(std::move(result), root_, interpolating_);
 	}
 	std::ostringstream oss;
-	oss << "tomlex::detail::apply_custom_resolver: non-registered resolver: \"" + key + "\", "
+	oss << "tomlex::detail::apply_custom_resolver: non-registered resolver_type: \"" + key + "\", "
 		<< "registered: ";
 	for (const auto& [k, v] : resolver_table<Value>) {
 		oss << k << ", ";
@@ -221,7 +216,7 @@ template <typename Value>
 toml::result<Value, std::string> parse_value_strict(toml::detail::location& loc);
 
 template <typename Value>
-Value to_toml_value(string const& str) {
+Value to_toml_value(std::string const& str) {
 	if (str.empty()) {
 		throw std::runtime_error(
 			"tomlex::detail::to_toml_value: cannot convert empty string to toml::value");
@@ -241,7 +236,7 @@ Value to_toml_value(string const& str) {
 }
 
 template <typename Value>
-string to_string(Value const& val) {
+std::string to_string(Value const& val) {
 	std::ostringstream oss;
 	if (val.is_string()) {
 		return val.as_string();
@@ -278,19 +273,20 @@ string to_string(Value const& val) {
 }
 
 template <typename Value>
-Value evaluate(string_view expr, Value const& root_, std::unordered_set<string>& interpolating_) {
+Value evaluate(std::string_view expr, Value const& root_,
+			   std::unordered_set<std::string>& interpolating_) {
 	auto pos_first_colon = expr.find(':');
 
 	// コロンがないのでinterp
-	if (pos_first_colon == string::npos) {
+	if (pos_first_colon == std::string::npos) {
 		expr = utils::trim(expr);
 		auto evaluated = interp(expr, root_, interpolating_);
 		return evaluated;
 	}
 
 	// 関数適用
-	string_view func_name = utils::trim(expr.substr(0, pos_first_colon));
-	string_view args = utils::trim(expr.substr(pos_first_colon + 1));
+	std::string_view func_name = utils::trim(expr.substr(0, pos_first_colon));
+	std::string_view args = utils::trim(expr.substr(pos_first_colon + 1));
 	auto evaluated = apply_custom_resolver(func_name, to_toml_value<Value>(std::string(args)),
 										   root_, interpolating_);
 	return evaluated;
@@ -309,7 +305,8 @@ int calc_charsize(unsigned char const lead) {
 	return 4;
 }
 template <typename Value>
-Value resolve_each(Value&& val, Value const& root_, std::unordered_set<string>& interpolating_) {
+Value resolve_each(Value&& val, Value const& root_,
+				   std::unordered_set<std::string>& interpolating_) {
 	if (!val.is_string()) {
 		return val;
 	}
@@ -317,7 +314,7 @@ Value resolve_each(Value&& val, Value const& root_, std::unordered_set<string>& 
 	bool dollar_found = false;
 	bool resolved = false;
 	int step_size = 0;
-	string value_str = val.as_string();
+	std::string value_str = val.as_string();
 	std::stack<std::pair<size_t, bool>> dist_left_bracket_st;
 
 	for (auto it = value_str.begin(); it != value_str.end(); it += step_size) {
@@ -347,7 +344,7 @@ Value resolve_each(Value&& val, Value const& root_, std::unordered_set<string>& 
 				auto left = value_str.begin() + dist_left;
 				try {
 					auto evaluated =
-						evaluate(string_view{&(*(left + 1)),
+						evaluate(std::string_view{&(*(left + 1)),
 											 static_cast<size_t>(std::distance(left + 1, it))},
 								 root_, interpolating_);
 					// パースする文字列の先頭が"${"で後端が"}"の場合は、toml::valueをそのまま返す
@@ -391,14 +388,14 @@ Value resolve_each(Value&& val, Value const& root_, std::unordered_set<string>& 
 
 template <typename Value = toml::value, typename... Keys>
 Value find(Value const& root, Value const& cfg, Keys&&... keys) {
-	std::unordered_set<string> interpolating;
+	std::unordered_set<std::string> interpolating;
 	Value val = toml::find(cfg, std::forward<Keys>(keys)...);
 	return resolve_each(std::move(val), root, interpolating);
 }
 
 template <typename Value = toml::value, typename... Keys>
 Value find_from_root(Value const& root, Keys&&... keys) {
-	std::unordered_set<string> interpolating;
+	std::unordered_set<std::string> interpolating;
 	Value val = toml::find(root, std::forward<Keys>(keys)...);
 	return resolve_each(std::move(val), root, interpolating);
 }

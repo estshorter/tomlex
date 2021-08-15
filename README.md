@@ -18,7 +18,7 @@ Note that this library requires C++17 or upper and depends on [toml11](https://g
 #include <tomlex/tomlex.hpp>
 #include <tomlex/resolvers.hpp>
 
-toml::value plus_10(toml::value const& args) { return args.as_integer() + 10; };
+toml::value plus_10(toml::value && args) { return args.as_integer() + 10; };
 using namespace std;
 
 int main(void) {
@@ -81,7 +81,7 @@ bar = "${param}0" # "100": string, NOT int
 Examples:
 ```cpp
 //function definition
-toml::value join(toml::value const& args, std::string const& sep = "_") {
+toml::value join(toml::value && args, std::string const& sep = "_") {
     switch (args.type()) {
         case toml::value_t::array: {
             auto& array_ = args.as_array();
@@ -118,7 +118,7 @@ flt1 = 7.0
 str1 = "7.0"
 
 # function definition: 
-# toml::value no_op(toml::value const& args) { return args; };
+# toml::value no_op(toml::value && args) { return args; };
 
 # be careful of argument type
 conv_flt1 = "${no_op: ${flt1}}"   # ${no_op: 7.0} -> 7.0: double
