@@ -59,7 +59,9 @@ inline std::string_view ltrim(std::string_view s, const char* t = ws) {
 	return s;
 }
 
-inline std::string_view trim(std::string_view s, const char* t = ws) { return ltrim(rtrim(s, t), t); }
+inline std::string_view trim(std::string_view s, const char* t = ws) {
+	return ltrim(rtrim(s, t), t);
+}
 
 }  // namespace utils
 
@@ -79,7 +81,8 @@ static inline std::unordered_map<std::string, resolver_type<Value>> resolver_tab
 
 // decay_tしないとうまくオーバーロード解決できない
 template <typename Value = toml::value>
-void register_resolver(std::string const& resolver_name, std::decay_t<resolver_type<Value>> const func) {
+void register_resolver(std::string const& resolver_name,
+					   std::decay_t<resolver_type<Value>> const func) {
 	if (resolver_name.empty()) {
 		throw std::runtime_error("tomlex::register_resolver: empty resolver_type name");
 	}
@@ -142,7 +145,8 @@ Value parse(U&& filename) {
 
 namespace detail {
 template <typename Value>
-Value resolve_each(Value&& val, Value const& root_, std::unordered_set<std::string>& interpolating_);
+Value resolve_each(Value&& val, Value const& root_,
+				   std::unordered_set<std::string>& interpolating_);
 
 template <typename Value>
 void resolve_impl(Value& val, Value const& root_, std::unordered_set<std::string>& interpolating_) {
@@ -159,7 +163,8 @@ void resolve_impl(Value& val, Value const& root_, std::unordered_set<std::string
 }
 
 template <typename Value>
-Value interp(std::string_view dst, Value const& root_, std::unordered_set<std::string>& interpolating_) {
+Value interp(std::string_view dst, Value const& root_,
+			 std::unordered_set<std::string>& interpolating_) {
 	if (dst.empty()) {
 		throw std::runtime_error("tomlex::detail::interp: empty interpolation key");
 	}
@@ -184,14 +189,14 @@ Value interp(std::string_view dst, Value const& root_, std::unordered_set<std::s
 		Value const& tmp = node->at(item);
 		node = &tmp;
 	}
-	Value ret = *node; //copy 
+	Value ret = *node;	// copy
 	Value result = resolve_each(std::move(ret), root_, interpolating_);
 	interpolating_.erase(key);
 	return result;
 }
 
 template <typename Value>
-Value apply_custom_resolver(std::string_view func_name, Value && arr, Value const& root_,
+Value apply_custom_resolver(std::string_view func_name, Value&& arr, Value const& root_,
 							std::unordered_set<std::string>& interpolating_) {
 	if (func_name.empty()) {
 		throw std::runtime_error("tomlex::detail::apply_custom_resolver: empty resolver_name");
@@ -345,7 +350,7 @@ Value resolve_each(Value&& val, Value const& root_,
 				try {
 					auto evaluated =
 						evaluate(std::string_view{&(*(left + 1)),
-											 static_cast<size_t>(std::distance(left + 1, it))},
+												  static_cast<size_t>(std::distance(left + 1, it))},
 								 root_, interpolating_);
 					// パースする文字列の先頭が"${"で後端が"}"の場合は、toml::valueをそのまま返す
 					if ((left - 1) == value_str.begin() && (it + 1) == value_str.end()) {
@@ -581,8 +586,7 @@ toml::result<Value, std::string> parse_value_strict(toml::detail::location& loc)
 	}
 }
 
-
-//from toml::literals::toml_literals
+// from toml::literals::toml_literals
 template <typename Value>
 Value parse_toml_literal(toml::detail::location loc) {
 	// if there are some comments or empty lines, skip them.

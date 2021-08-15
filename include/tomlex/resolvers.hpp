@@ -6,7 +6,7 @@
 namespace tomlex {
 namespace resolvers {
 template <typename Value = toml::value>
-Value decode(Value && args) {
+Value decode(Value&& args) {
 	switch (args.type()) {
 		case toml::value_t::string: {
 			return tomlex::detail::to_toml_value<Value>(args.as_string());
@@ -17,7 +17,7 @@ Value decode(Value && args) {
 }
 
 template <typename Value = toml::value>
-Value env(Value && args) {
+Value env(Value&& args) {
 	switch (args.type()) {
 		case toml::value_t::string: {
 			std::string target = args.as_string();
