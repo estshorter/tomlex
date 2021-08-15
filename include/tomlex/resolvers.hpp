@@ -5,23 +5,19 @@
 
 namespace tomlex {
 namespace resolvers {
-template <typename C = TOML11_DEFAULT_COMMENT_STRATEGY,
-		  template <typename...> class T = std::unordered_map,
-		  template <typename...> class A = std::vector>
-basic_value<C, T, A> decode(basic_value<C, T, A> const& args) {
+template <typename Value = toml::value>
+Value decode(Value const& args) {
 	switch (args.type()) {
 		case toml::value_t::string: {
-			return tomlex::detail::to_toml_value(args.as_string());
+			return tomlex::detail::to_toml_value<Value>(args.as_string());
 		}
 		default:
 			return args;
 	}
 }
 
-template <typename C = TOML11_DEFAULT_COMMENT_STRATEGY,
-		  template <typename...> class T = std::unordered_map,
-		  template <typename...> class A = std::vector>
-basic_value<C, T, A> env(basic_value<C, T, A> const& args) {
+template <typename Value = toml::value>
+Value env(Value const& args) {
 	switch (args.type()) {
 		case toml::value_t::string: {
 			std::string target = args.as_string();

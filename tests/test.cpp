@@ -50,6 +50,8 @@ class TestEnvironment : public ::testing::Environment {
 		register_resolver("concat", [](auto const& args) { return join(args, ""); });
 		register_resolver("join", [](auto const& args) { return join(args); });
 		register_resolver("no_op", no_op);
+		register_resolver("env", resolvers::env<>);
+		register_resolver("decode", resolvers::decode<>);
 	}
 };
 
@@ -239,11 +241,11 @@ TEST(TesttomlextTest, clear_resolver) {
 	std::string resolver_name = "__no_op__";
 	register_resolver(resolver_name, no_op);
 
-	auto it = resolvers_<>.find(resolver_name);
-	ASSERT_NE(it, resolvers_<>.end());
+	auto it = resolver_table<>.find(resolver_name);
+	ASSERT_NE(it, resolver_table<>.end());
 	tomlex::clear_resolver(resolver_name);
-	it = resolvers_<>.find(resolver_name);
-	ASSERT_EQ(it, resolvers_<>.end());
+	it = resolver_table<>.find(resolver_name);
+	ASSERT_EQ(it, resolver_table<>.end());
 	ASSERT_THROW(tomlex::clear_resolver(resolver_name), std::runtime_error);
 }
 
