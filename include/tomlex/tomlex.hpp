@@ -85,23 +85,11 @@ static inline std::unordered_map<std::string,
 	resolver_table;
 
 // decay_tしないとうまくオーバーロード解決できない
-template <typename Value = toml::value>
-void register_resolver(std::string const& resolver_name,
-					   std::decay_t<resolver_type<Value>> const func) {
-	if (resolver_name.empty()) {
-		throw std::runtime_error("tomlex::register_resolver: empty resolver_type name");
-	}
-	if (auto it = resolver_table<Value>.find(resolver_name); it != resolver_table<Value>.end()) {
-		throw std::runtime_error("tomlex::register_resolver: resolver_type \"" + resolver_name +
-								 "\" is already registered");
-	}
-	resolver_table<Value>[resolver_name] = func;
-}
-
-//template使ってもいいが、とりあえずコピペでしのぐ
-template <typename Value = toml::value>
-void register_resolver(std::string const& resolver_name,
-					   std::decay_t<resolver_type_noarg<Value>> const func) {
+template <typename Value = toml::value, typename T>
+void register_resolver(std::string const& resolver_name, T const& func) {
+	static_assert(!(std::is_same_v<T, std::decay_t<resolver_type_noarg<Value>>> |
+					std::is_same_v<T, std::decay_t<resolver_type<Value>>>),
+				  "T must be \"resolver_type\" or \"resolver_type_noarg\"");
 	if (resolver_name.empty()) {
 		throw std::runtime_error("tomlex::register_resolver: empty resolver_type name");
 	}
