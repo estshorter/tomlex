@@ -66,7 +66,7 @@ test = "${a.b.c.d}"                               # 10: int
 # function definition: 
 # toml::value noarg() { return 1; };
 # register_resolver("noarg", noarg);
-noarg = ${noarg:} # OK: 1: int: functions with no arguments are allowed
+noarg = "${noarg:}" # OK: 1: int: functions with no arguments are allowed
 
 [a.b.c]
 d = 10
