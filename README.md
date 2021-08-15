@@ -118,7 +118,7 @@ flt1 = 7.0
 str1 = "7.0"
 
 # function definition: 
-# toml::value no_op(toml::value && args) { return args; };
+# toml::value no_op(toml::value && args) { return std::move(args); };
 
 # be careful of argument type
 conv_flt1 = "${no_op: ${flt1}}"   # ${no_op: 7.0} -> 7.0: double
