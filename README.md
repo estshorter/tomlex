@@ -98,12 +98,12 @@ toml::value join(toml::value && args, std::string const& sep = "_") {
             return oss.str();
         }
         default:
-            return args;
+            return std::move(args);
     }
 }
 
 //register
-tomlex::register_resolver("join_", [](toml::value const& args) { return join(std::move(args)); });
+tomlex::register_resolver("join_", [](toml::value && args) { return join(std::move(args)); });
 ```
 
 ```toml
@@ -123,7 +123,7 @@ flt1 = 7.0
 str1 = "7.0"
 
 # function definition: 
-# toml::value no_op(toml::value && args) { return args; };
+# toml::value no_op(toml::value && args) { return std::move(args); };
 
 # be careful of argument type
 conv_flt1 = "${no_op: ${flt1}}"   # ${no_op: 7.0} -> 7.0: double
