@@ -93,7 +93,7 @@ toml::value join(toml::value && args, std::string const& sep = "_") {
             return oss.str();
         }
         default:
-            return args;
+            return std::move(args);
     }
 }
 
