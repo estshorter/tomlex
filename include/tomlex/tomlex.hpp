@@ -12,7 +12,6 @@
 #include <unordered_set>
 #include <vector>
 
-
 namespace tomlex {
 using std::string;
 using std::string_view;
@@ -73,6 +72,8 @@ inline string_view trim(string_view s, const char* t = ws) { return ltrim(rtrim(
 namespace detail {
 template <typename Value>
 void resolve_impl(Value& val, Value const& root_, std::unordered_set<string>& interpolating_);
+template <typename Value>
+Value parse_toml_literal(toml::detail::location loc);
 }  // namespace detail
 
 template <typename Value = toml::value>
@@ -113,7 +114,7 @@ Value from_dotted_keys(vector<string> const& key_list) {
 	typename Value::table_type table;
 	for (const auto& key : key_list) {
 		toml::detail::location loc(key, key);
-		auto val = toml::literals::literal_internal_impl(loc);
+		auto val = detail::parse_toml_literal<Value>(loc);
 		if (!val.is_table()) {
 			std::ostringstream oss;
 			oss << "cannot recognize as a table: \"" << val << "\"";
@@ -130,7 +131,7 @@ Value from_cli(const int argc, char const* const argv[], const int first = 1) {
 		throw std::runtime_error("tomlex::from_cli: first < argc must be satisfied");
 	}
 	std::vector<std::string> arg_list(argv + first, argv + argc);
-	return from_dotted_keys(arg_list);
+	return from_dotted_keys<Value>(arg_list);
 }
 
 template <typename Value = toml::value>
@@ -141,7 +142,7 @@ Value resolve(Value&& root_) {
 }
 template <typename Value = toml::value, typename U>
 Value parse(U&& filename) {
-	return tomlex::resolve(toml::parse(std::forward<U>(filename)));
+	return tomlex::resolve<Value>(toml::parse(std::forward<U>(filename)));
 }
 
 namespace detail {
@@ -190,7 +191,7 @@ Value interp(string_view dst, Value const& root_, std::unordered_set<string>& in
 	}
 
 	auto ret = *node;
-	auto result = resolve_each(std::move(ret), root_, interpolating_);
+	Value result = resolve_each(std::move(ret), root_, interpolating_);
 	interpolating_.erase(key);
 	return result;
 }
@@ -228,7 +229,7 @@ Value to_toml_value(string const& str) {
 	}
 	toml::detail::location loc(str, str);
 	try {
-		auto const result = parse_value_strict<Value>(loc);
+		const auto result = parse_value_strict<Value>(loc);
 		if (result.is_err()) {
 			// std::cout << result.as_err() << std::endl;
 			throw std::runtime_error(result.as_err());
@@ -284,7 +285,7 @@ Value evaluate(string_view expr, Value const& root_, std::unordered_set<string>&
 	// コロンがないのでinterp
 	if (pos_first_colon == string::npos) {
 		expr = utils::trim(expr);
-		toml::value evaluated = interp(expr, root_, interpolating_);
+		auto evaluated = interp(expr, root_, interpolating_);
 		return evaluated;
 	}
 
@@ -384,23 +385,22 @@ Value resolve_each(Value&& val, Value const& root_, std::unordered_set<string>& 
 				  << "  \"${\" is found, but \"}\" is missing" << std::endl;
 	}
 	if (resolved) {
-		return toml::value(value_str);
+		return value_str;
 	}
 	return val;
 }
 
 template <typename Value = toml::value, typename... Keys>
-Value find(Value const& root, Value const& cfg,
-						  Keys&&... keys) {
+Value find(Value const& root, Value const& cfg, Keys&&... keys) {
 	std::unordered_set<string> interpolating;
-	auto val = toml::find(cfg, std::forward<Keys>(keys)...);
+	Value val = toml::find(cfg, std::forward<Keys>(keys)...);
 	return resolve_each(std::move(val), root, interpolating);
 }
 
 template <typename Value = toml::value, typename... Keys>
 Value find_from_root(Value const& root, Keys&&... keys) {
 	std::unordered_set<string> interpolating;
-	auto val = toml::find(root, std::forward<Keys>(keys)...);
+	Value val = toml::find(root, std::forward<Keys>(keys)...);
 	return resolve_each(std::move(val), root, interpolating);
 }
 
@@ -585,6 +585,68 @@ toml::result<Value, std::string> parse_value_strict(toml::detail::location& loc)
 			loc.reset(first);
 			return err(msg);
 		}
+	}
+}
+
+
+//from toml::literals::toml_literals
+template <typename Value>
+Value parse_toml_literal(toml::detail::location loc) {
+	// if there are some comments or empty lines, skip them.
+	using skip_line = ::toml::detail::repeat<
+		toml::detail::sequence<::toml::detail::maybe<::toml::detail::lex_ws>,
+							   ::toml::detail::maybe<::toml::detail::lex_comment>,
+							   ::toml::detail::lex_newline>,
+		::toml::detail::at_least<1>>;
+	skip_line::invoke(loc);
+
+	// if there are some whitespaces before a value, skip them.
+	using skip_ws = ::toml::detail::repeat<::toml::detail::lex_ws, ::toml::detail::at_least<1>>;
+	skip_ws::invoke(loc);
+
+	// to distinguish arrays and tables, first check it is a table or not.
+	//
+	// "[1,2,3]"_toml;   // this is an array
+	// "[table]"_toml;   // a table that has an empty table named "table" inside.
+	// "[[1,2,3]]"_toml; // this is an array of arrays
+	// "[[table]]"_toml; // this is a table that has an array of tables inside.
+	//
+	// "[[1]]"_toml;     // this can be both... (currently it becomes a table)
+	// "1 = [{}]"_toml;  // this is a table that has an array of table named 1.
+	// "[[1,]]"_toml;    // this is an array of arrays.
+	// "[[1],]"_toml;    // this also.
+
+	const auto the_front = loc.iter();
+
+	const bool is_table_key = ::toml::detail::lex_std_table::invoke(loc);
+	loc.reset(the_front);
+
+	const bool is_aots_key = ::toml::detail::lex_array_table::invoke(loc);
+	loc.reset(the_front);
+
+	// If it is neither a table-key or a array-of-table-key, it may be a value.
+	if (!is_table_key && !is_aots_key) {
+		if (auto data = ::toml::detail::parse_value<Value>(loc)) {
+			return data.unwrap();
+		}
+	}
+
+	// Note that still it can be a table, because the literal might be something
+	// like the following.
+	// ```cpp
+	// R"( // c++11 raw string literals
+	//   key = "value"
+	//   int = 42
+	// )"_toml;
+	// ```
+	// It is a valid toml file.
+	// It should be parsed as if we parse a file with this content.
+
+	if (auto data = ::toml::detail::parse_toml_file<Value>(loc)) {
+		return data.unwrap();
+	} else	// none of them.
+	{
+		throw ::toml::syntax_error(data.unwrap_err(), toml::source_location(loc));
 	}
 }
 
