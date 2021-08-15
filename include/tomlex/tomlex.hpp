@@ -16,7 +16,6 @@ namespace tomlex {
 using std::string;
 using std::string_view;
 using std::vector;
-using toml::basic_value;
 namespace utils {
 
 // https://stackoverflow.com/questions/3418231/replace-part-of-a-string-with-another-string
