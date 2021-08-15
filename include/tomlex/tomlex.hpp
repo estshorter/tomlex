@@ -12,8 +12,6 @@
 #include <unordered_set>
 #include <vector>
 
-//本当はtoml::valueじゃなくてbasic_valueとテンプレートで頑張るべきだが、
-//テンプレートエラーが辛そうなのでさしあたりtoml::valueに固定しておく
 
 namespace tomlex {
 using std::string;
