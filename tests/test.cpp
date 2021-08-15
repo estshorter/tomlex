@@ -14,8 +14,9 @@ char* filename_good;
 char* filename_bad;
 
 toml::value no_op(toml::value const& args) { return args; };
+toml::value lt() { return toml::local_time(std::chrono::hours(8) + std::chrono::minutes(10)); };
 
-toml::value add(toml::value && args) {
+toml::value add(toml::value&& args) {
 	auto& array_ = args.as_array();
 	std::int64_t ret = 0;
 	for (auto& item : array_) {
@@ -25,7 +26,7 @@ toml::value add(toml::value && args) {
 	return ret;
 }
 
-toml::value join(toml::value && args, std::string const& sep = "_") {
+toml::value join(toml::value&& args, std::string const& sep = "_") {
 	switch (args.type()) {
 		case toml::value_t::array: {
 			auto& array_ = args.as_array();
@@ -46,10 +47,11 @@ class TestEnvironment : public ::testing::Environment {
 	virtual void SetUp() {
 		register_resolver("add", add);
 		register_resolver("concat", [](auto&& args) { return join(std::move(args), ""); });
-		register_resolver("join", [](auto && args) { return join(std::move(args)); });
+		register_resolver("join", [](auto&& args) { return join(std::move(args)); });
 		register_resolver("no_op", no_op);
 		register_resolver("env", tomlex::resolvers::env<>);
 		register_resolver("decode", tomlex::resolvers::decode<>);
+		register_resolver("lt", lt);
 	}
 };
 
@@ -90,6 +92,8 @@ TEST_F(TesttomlextGoodTest, resolver_type) {
 	EXPECT_EQ(result.as_string(), "ab");
 	result = find_from_root(cfg, "resolver4");
 	EXPECT_EQ(result.as_string(), "^ab/c%");
+	result = find_from_root(cfg, "resolver5");
+	EXPECT_EQ(tomlex::detail::to_string(result), "08:10:00");
 }
 
 TEST_F(TesttomlextGoodTest, resolver_interp) {

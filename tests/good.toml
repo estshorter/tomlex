@@ -4,6 +4,7 @@ resolver1 = "${add:[1,2]}"                       # 3
 resolver2 = '${  concat  :  [  "a" ,  "b  " ] }' # "ab  "
 resolver3 = '${concat:["a","b"]}'                # "ab"
 resolver4 = '^${concat:["a","b"]}/c%'            # "^ab/c%"
+resolver5 = "${lt:}"
 resolver_interp1 = '${add:[1,${num1}]}'          # 2
 resolver_interp2 = '${${add}:[1,${num1}]}'       # 2
 resolver_interp3 = '${num1${add:[1,1]}}'         # 12

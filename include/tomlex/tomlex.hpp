@@ -10,6 +10,7 @@
 #include <toml.hpp>
 #include <unordered_map>
 #include <unordered_set>
+#include <variant>
 #include <vector>
 
 namespace tomlex {
@@ -75,14 +76,32 @@ Value parse_toml_literal(toml::detail::location loc);
 
 template <typename Value = toml::value>
 using resolver_type = std::function<Value(Value&&)>;
+template <typename Value = toml::value>
+using resolver_type_noarg = std::function<Value()>;
 
 template <typename Value = toml::value>
-static inline std::unordered_map<std::string, resolver_type<Value>> resolver_table;
+static inline std::unordered_map<std::string,
+								 std::variant<resolver_type<Value>, resolver_type_noarg<Value>>>
+	resolver_table;
 
 // decay_tしないとうまくオーバーロード解決できない
 template <typename Value = toml::value>
 void register_resolver(std::string const& resolver_name,
 					   std::decay_t<resolver_type<Value>> const func) {
+	if (resolver_name.empty()) {
+		throw std::runtime_error("tomlex::register_resolver: empty resolver_type name");
+	}
+	if (auto it = resolver_table<Value>.find(resolver_name); it != resolver_table<Value>.end()) {
+		throw std::runtime_error("tomlex::register_resolver: resolver_type \"" + resolver_name +
+								 "\" is already registered");
+	}
+	resolver_table<Value>[resolver_name] = func;
+}
+
+//template使ってもいいが、とりあえずコピペでしのぐ
+template <typename Value = toml::value>
+void register_resolver(std::string const& resolver_name,
+					   std::decay_t<resolver_type_noarg<Value>> const func) {
 	if (resolver_name.empty()) {
 		throw std::runtime_error("tomlex::register_resolver: empty resolver_type name");
 	}
@@ -195,18 +214,41 @@ Value interp(std::string_view dst, Value const& root_,
 	return result;
 }
 
+// 前準備。 渡された(ラムダ式等の)関数オブジェクトをオーバーロード状にするやつ
+template <class... Ts>
+struct overloaded : Ts... {
+	using Ts::operator()...;
+};
+//型推論のためのおまじない
+template <class... Ts>
+overloaded(Ts...) -> overloaded<Ts...>;
+
 template <typename Value>
-Value apply_custom_resolver(std::string_view func_name, Value&& arr, Value const& root_,
-							std::unordered_set<std::string>& interpolating_) {
-	if (func_name.empty()) {
+Value apply_custom_resolver(std::string_view resolver_name, std::string_view arr_str,
+							Value const& root_, std::unordered_set<std::string>& interpolating_) {
+	if (resolver_name.empty()) {
 		throw std::runtime_error("tomlex::detail::apply_custom_resolver: empty resolver_name");
 	}
-	std::string key(func_name);
+	std::string key(resolver_name);
 	if (auto it = resolver_table<Value>.find(key); it != resolver_table<Value>.end()) {
-		resolver_type<Value> func = it->second;
-		Value result = func(std::move(arr));
+		// resolver_type<Value> func = it->second;
+		Value result = std::visit(
+			overloaded{[&arr_str](resolver_type<Value> func) {
+						   return func(to_toml_value<Value>(std::string(arr_str)));
+					   },
+					   [&arr_str, &resolver_name](resolver_type_noarg<Value> func) {
+						   if (!arr_str.empty()) {
+							   std::cerr << "tomlex::detail::apply_custom_resolver: resolver \""
+										 << resolver_name
+										 << "\": following arguments are not used : \"" << arr_str
+										 << "\"" << std::endl;
+						   }
+						   return func();
+					   }},
+			it->second);
+		// Value result = func(std::move(arr));
 		return resolve_each(std::move(result), root_, interpolating_);
-	}
+	}  // namespace detail
 	std::ostringstream oss;
 	oss << "tomlex::detail::apply_custom_resolver: non-registered resolver_type: \"" + key + "\", "
 		<< "registered: ";
@@ -214,7 +256,7 @@ Value apply_custom_resolver(std::string_view func_name, Value&& arr, Value const
 		oss << k << ", ";
 	}
 	throw std::runtime_error(oss.str());
-}
+}  // namespace tomlex
 
 // foward decl
 template <typename Value>
@@ -292,8 +334,7 @@ Value evaluate(std::string_view expr, Value const& root_,
 	// 関数適用
 	std::string_view func_name = utils::trim(expr.substr(0, pos_first_colon));
 	std::string_view args = utils::trim(expr.substr(pos_first_colon + 1));
-	auto evaluated = apply_custom_resolver(func_name, to_toml_value<Value>(std::string(args)),
-										   root_, interpolating_);
+	auto evaluated = apply_custom_resolver(func_name, args, root_, interpolating_);
 	return evaluated;
 }
 

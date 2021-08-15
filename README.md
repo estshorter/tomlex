@@ -63,6 +63,11 @@ test = "${a.b.c.d}"                               # 10: int
 #test = "${a.    b.c.d}"                          # NG: spaces before or after dot are NOT allowed
 #test = "${'a.b.c.d'}"                            # NG: surrounding with quotation marks is NOT allowed
 
+# function definition: 
+# toml::value noarg() { return 1; };
+# register_resolver("noarg", noarg);
+noarg = ${noarg:} # OK: 1: int: functions with no arguments are allowed
+
 [a.b.c]
 d = 10
 # e = "${.d}" # NG: relative path is NOT allowed
