@@ -77,19 +77,19 @@ Value parse_toml_literal(toml::detail::location loc);
 template <typename Value = toml::value>
 using resolver_type = std::function<Value(Value&&)>;
 template <typename Value = toml::value>
-using resolver_type_noarg = std::function<Value()>;
+using resolver_noarg_type = std::function<Value()>;
 
 template <typename Value = toml::value>
 static inline std::unordered_map<std::string,
-								 std::variant<resolver_type<Value>, resolver_type_noarg<Value>>>
+								 std::variant<resolver_type<Value>, resolver_noarg_type<Value>>>
 	resolver_table;
 
 // decay_tしないとうまくオーバーロード解決できない
 template <typename Value = toml::value, typename T>
 void register_resolver(std::string const& resolver_name, T const& func) {
-	static_assert(!(std::is_same_v<T, std::decay_t<resolver_type_noarg<Value>>> |
+	static_assert(!(std::is_same_v<T, std::decay_t<resolver_noarg_type<Value>>> |
 					std::is_same_v<T, std::decay_t<resolver_type<Value>>>),
-				  "T must be \"resolver_type\" or \"resolver_type_noarg\"");
+				  "T must be \"resolver_type\" or \"resolver_noarg_type\"");
 	if (resolver_name.empty()) {
 		throw std::runtime_error("tomlex::register_resolver: empty resolver_type name");
 	}
@@ -224,7 +224,7 @@ Value apply_custom_resolver(std::string_view resolver_name, std::string_view arr
 			overloaded{[&arr_str](resolver_type<Value> func) {
 						   return func(to_toml_value<Value>(std::string(arr_str)));
 					   },
-					   [&arr_str, &resolver_name](resolver_type_noarg<Value> func) {
+					   [&arr_str, &resolver_name](resolver_noarg_type<Value> func) {
 						   if (!arr_str.empty()) {
 							   std::cerr << "tomlex::detail::apply_custom_resolver: resolver \""
 										 << resolver_name
