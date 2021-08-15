@@ -12,7 +12,7 @@ Value decode(Value && args) {
 			return tomlex::detail::to_toml_value<Value>(args.as_string());
 		}
 		default:
-			return args;
+			return std::move(args);
 	}
 }
 

@@ -133,7 +133,7 @@ template <typename Value = toml::value>
 Value resolve(Value&& root_) {
 	std::unordered_set<std::string> interpolating_;
 	detail::resolve_impl(root_, root_, interpolating_);
-	return root_;
+	return std::move(root_);
 }
 template <typename Value = toml::value, typename U>
 Value parse(U&& filename) {
@@ -308,13 +308,13 @@ template <typename Value>
 Value resolve_each(Value&& val, Value const& root_,
 				   std::unordered_set<std::string>& interpolating_) {
 	if (!val.is_string()) {
-		return val;
+		return std::move(val);
 	}
 
 	bool dollar_found = false;
 	bool resolved = false;
 	int step_size = 0;
-	std::string value_str = val.as_string();
+	std::string value_str = std::move(val.as_string());
 	std::stack<std::pair<size_t, bool>> dist_left_bracket_st;
 
 	for (auto it = value_str.begin(); it != value_str.end(); it += step_size) {
@@ -380,10 +380,7 @@ Value resolve_each(Value&& val, Value const& root_,
 		std::cerr << "tomlex: warning while parsing " << val << std::endl
 				  << "  \"${\" is found, but \"}\" is missing" << std::endl;
 	}
-	if (resolved) {
-		return value_str;
-	}
-	return val;
+	return value_str;
 }
 
 template <typename Value = toml::value, typename... Keys>
