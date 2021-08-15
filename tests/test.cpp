@@ -6,16 +6,14 @@
 // clang-format on
 
 using std::string;
-using namespace tomlex;
+using tomlex::register_resolver;
 using tomlex::detail::find_from_root;
 using namespace toml::literals::toml_literals;
 
 char* filename_good;
 char* filename_bad;
 
-toml::value no_op(toml::value const& args) {
-	return args;
-};
+toml::value no_op(toml::value const& args) { return args; };
 
 toml::value add(toml::value const& args) {
 	auto& array_ = args.as_array();
@@ -50,8 +48,8 @@ class TestEnvironment : public ::testing::Environment {
 		register_resolver("concat", [](auto const& args) { return join(args, ""); });
 		register_resolver("join", [](auto const& args) { return join(args); });
 		register_resolver("no_op", no_op);
-		register_resolver("env", resolvers::env<>);
-		register_resolver("decode", resolvers::decode<>);
+		register_resolver("env", tomlex::resolvers::env<>);
+		register_resolver("decode", tomlex::resolvers::decode<>);
 	}
 };
 
@@ -237,15 +235,14 @@ TEST(TesttomlextTest, merge) {
 }
 
 TEST(TesttomlextTest, clear_resolver) {
-	using tomlex::register_resolver;
 	std::string resolver_name = "__no_op__";
 	register_resolver(resolver_name, no_op);
 
-	auto it = resolver_table<>.find(resolver_name);
-	ASSERT_NE(it, resolver_table<>.end());
+	auto it = tomlex::resolver_table<>.find(resolver_name);
+	ASSERT_NE(it, tomlex::resolver_table<>.end());
 	tomlex::clear_resolver(resolver_name);
-	it = resolver_table<>.find(resolver_name);
-	ASSERT_EQ(it, resolver_table<>.end());
+	it = tomlex::resolver_table<>.find(resolver_name);
+	ASSERT_EQ(it, tomlex::resolver_table<>.end());
 	ASSERT_THROW(tomlex::clear_resolver(resolver_name), std::runtime_error);
 }
 
