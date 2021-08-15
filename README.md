@@ -98,7 +98,7 @@ toml::value join(toml::value && args, std::string const& sep = "_") {
 }
 
 //register
-tomlex::register_resolver("join_", [](toml::value const& args) { return join(args); });
+tomlex::register_resolver("join_", [](toml::value const& args) { return join(std::move(args)); });
 ```
 
 ```toml
