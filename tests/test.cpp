@@ -94,6 +94,16 @@ TEST_F(TesttomlextGoodTest, resolver_type) {
 	EXPECT_EQ(result.as_string(), "^ab/c%");
 	result = find_from_root(cfg, "resolver5");
 	EXPECT_EQ(tomlex::detail::to_string(result), "08:10:00");
+	result = find_from_root(cfg, "resolvers");
+	auto expected = R"([[resolvers]]
+text = 1
+[[resolvers]]
+text = [0, 1, 2]
+)"_toml;
+	EXPECT_EQ(result, expected["resolvers"]);
+	result = find_from_root(cfg, "arr_tbl");
+	expected = R"([{ int = 12 }, {name="estshorter"}])"_toml;
+	EXPECT_EQ(result, expected);
 }
 
 TEST_F(TesttomlextGoodTest, resolver_interp) {

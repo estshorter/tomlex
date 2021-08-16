@@ -72,6 +72,10 @@ template <typename Value>
 void resolve_impl(Value& val, Value const& root_, std::unordered_set<std::string>& interpolating_);
 template <typename Value>
 Value parse_toml_literal(toml::detail::location loc);
+// foward decl
+template <typename Value>
+Value resolve_impl(Value&& val, Value const& root_,
+				   std::unordered_set<std::string>& interpolating_);
 }  // namespace detail
 
 template <typename Value = toml::value>
@@ -174,8 +178,7 @@ Value from_cli(const int argc, char const* const argv[], const int first = 1) {
 template <typename Value = toml::value>
 Value resolve(Value&& root_) {
 	std::unordered_set<std::string> interpolating_;
-	detail::resolve_impl(root_, root_, interpolating_);
-	return std::move(root_);
+	return detail::resolve_impl(std::move(root_), root_, interpolating_);
 }
 template <typename Value = toml::value, typename U>
 Value parse(U&& filename) {
@@ -183,10 +186,6 @@ Value parse(U&& filename) {
 }
 
 namespace detail {
-// foward decl
-template <typename Value>
-Value resolve_each(Value&& val, Value const& root_,
-				   std::unordered_set<std::string>& interpolating_);
 
 template <typename Value>
 toml::result<Value, std::string> parse_value_strict(toml::detail::location& loc);
@@ -208,20 +207,6 @@ Value to_toml_value(std::string const& str) {
 	} catch (toml::syntax_error& e) {
 		// std::cout << e.what() << std::endl;
 		throw std::runtime_error(e.what());
-	}
-}
-
-template <typename Value>
-void resolve_impl(Value& val, Value const& root_, std::unordered_set<std::string>& interpolating_) {
-	if (!val.is_table()) {
-		return;
-	}
-	for (auto& [k, v] : val.as_table()) {
-		if (v.is_string()) {
-			val[k] = std::move(resolve_each(std::move(v), root_, interpolating_));
-		} else if (v.is_table()) {
-			resolve_impl(v, root_, interpolating_);
-		}
 	}
 }
 
@@ -253,7 +238,7 @@ Value interp(std::string_view dst, Value const& root_,
 		node = &tmp;
 	}
 	Value ret = *node;	// copy
-	Value result = resolve_each(std::move(ret), root_, interpolating_);
+	Value result = resolve_impl(std::move(ret), root_, interpolating_);
 	interpolating_.erase(key);
 	return result;
 }
@@ -291,7 +276,7 @@ Value apply_custom_resolver(std::string_view resolver_name, std::string_view arr
 					   }},
 			it->second);
 		// Value result = func(std::move(arr));
-		return resolve_each(std::move(result), root_, interpolating_);
+		return resolve_impl(std::move(result), root_, interpolating_);
 	}  // namespace detail
 	std::ostringstream oss;
 	oss << "tomlex::detail::apply_custom_resolver: non-registered resolver_type: \"" + key + "\", "
@@ -371,8 +356,21 @@ int calc_charsize(unsigned char const lead) {
 	return 4;
 }
 template <typename Value>
-Value resolve_each(Value&& val, Value const& root_,
+Value resolve_impl(Value&& val, Value const& root_,
 				   std::unordered_set<std::string>& interpolating_) {
+	if (val.is_table()) {
+		for (auto& [k, v] : val.as_table()) {
+			val[k] = std::move(resolve_impl(std::move(v), root_, interpolating_));
+		}
+		return std::move(val);
+	} else if (val.is_array()) {
+		int i = 0;
+		for (auto& item : val.as_array()) {
+			val[i] = std::move(resolve_impl(std::move(item), root_, interpolating_));
+			i++;
+		}
+		return std::move(val);
+	}
 	if (!val.is_string()) {
 		return std::move(val);
 	}
@@ -453,14 +451,14 @@ template <typename Value = toml::value, typename... Keys>
 Value find(Value const& root, Value const& cfg, Keys&&... keys) {
 	std::unordered_set<std::string> interpolating;
 	Value val = toml::find(cfg, std::forward<Keys>(keys)...);
-	return resolve_each(std::move(val), root, interpolating);
+	return resolve_impl(std::move(val), root, interpolating);
 }
 
 template <typename Value = toml::value, typename... Keys>
 Value find_from_root(Value const& root, Keys&&... keys) {
 	std::unordered_set<std::string> interpolating;
 	Value val = toml::find(root, std::forward<Keys>(keys)...);
-	return resolve_each(std::move(val), root, interpolating);
+	return resolve_impl(std::move(val), root, interpolating);
 }
 
 // following code is derived from toml11

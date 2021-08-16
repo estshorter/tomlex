@@ -5,9 +5,10 @@ resolver2 = '${  concat  :  [  "a" ,  "b  " ] }' # "ab  "
 resolver3 = '${concat:["a","b"]}'                # "ab"
 resolver4 = '^${concat:["a","b"]}/c%'            # "^ab/c%"
 resolver5 = "${lt:}"
-resolver_interp1 = '${add:[1,${num1}]}'          # 2
-resolver_interp2 = '${${add}:[1,${num1}]}'       # 2
-resolver_interp3 = '${num1${add:[1,1]}}'         # 12
+
+resolver_interp1 = '${add:[1,${num1}]}'    # 2
+resolver_interp2 = '${${add}:[1,${num1}]}' # 2
+resolver_interp3 = '${num1${add:[1,1]}}'   # 12
 
 num1 = 1
 num12 = 12
@@ -68,5 +69,18 @@ lt_cat = "${lt} a"
 ldt_cat = "${ldt} a"
 oft_cat = "${oft} a"
 
+arr_tbl = [{ int = "${num12}" }, "${owner}"]
+
 [owner]
 name = "estshorter"
+
+[[resolvers]]
+text = "${num1}"
+[[resolvers]]
+text = "${arr}"
+
+[tbl]
+[[array_in_table]]
+text = "${arrarr}"
+[[array_in_table]]
+text = "${arrarr_}"
