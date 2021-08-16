@@ -143,7 +143,7 @@ Value merge(Value&& base, Value&& overwrite) {
 		}
 		base[key] = std::move(value);
 	}
-	return base;
+	return std::move(base);
 }
 
 template <typename Value = toml::value>
