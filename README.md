@@ -42,7 +42,7 @@ int main(void) {
 	constexpr int argc = 3;
 	constexpr char* argv[argc] = {"PROGRAM_PATH", "  param   =   10000  ", "a.b.c.d  =  nan"};
 	toml::value cfg_cli = tomlex::from_cli(argc, argv);
-	cfg_cli.as_table().merge(cfg.as_table()); // data except for param and a.b.c.d are merged into cfg_cli
+	cfg = tomlex::merge(cfg, cfg_cli);  // data except for param and a.b.c.d are merged into cfg_cli
 	cout << cfg_cli << endl;
 
 	tomlex::clear_resolvers();
@@ -64,7 +64,7 @@ test = "${a.b.c.d}"                               # 10: int
 #test = "${'a.b.c.d'}"                            # NG: surrounding with quotation marks is NOT allowed
 
 # function definition: 
-# toml::value noarg() { return 1; };
+# toml::value noarg(toml::value&&) { return 1; };
 # register_resolver("noarg", noarg);
 noarg = "${noarg:}" # OK: 1: int: functions with no arguments are allowed
 

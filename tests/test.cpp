@@ -13,8 +13,10 @@ using namespace toml::literals::toml_literals;
 char* filename_good;
 char* filename_bad;
 
-toml::value no_op(toml::value const& args) { return args; };
-toml::value lt() { return toml::local_time(std::chrono::hours(8) + std::chrono::minutes(10)); };
+toml::value no_op(toml::value&& args) { return std::move(args); };
+toml::value lt(toml::value&&) {
+	return toml::local_time(std::chrono::hours(8) + std::chrono::minutes(10));
+};
 
 toml::value add(toml::value&& args) {
 	auto& array_ = args.as_array();

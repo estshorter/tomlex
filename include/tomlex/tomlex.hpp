@@ -10,7 +10,6 @@
 #include <toml.hpp>
 #include <unordered_map>
 #include <unordered_set>
-#include <variant>
 #include <vector>
 
 namespace tomlex {
@@ -80,20 +79,14 @@ Value resolve_impl(Value&& val, Value const& root_,
 
 template <typename Value = toml::value>
 using resolver_type = std::function<Value(Value&&)>;
-template <typename Value = toml::value>
-using resolver_noarg_type = std::function<Value()>;
 
 template <typename Value = toml::value>
-static inline std::unordered_map<std::string,
-								 std::variant<resolver_type<Value>, resolver_noarg_type<Value>>>
-	resolver_table;
+static inline std::unordered_map<std::string, resolver_type<Value>> resolver_table;
 
 // decay_tしないとうまくオーバーロード解決できない
-template <typename Value = toml::value, typename T>
-void register_resolver(std::string const& resolver_name, T const& func) {
-	static_assert(!(std::is_same_v<T, std::decay_t<resolver_noarg_type<Value>>> |
-					std::is_same_v<T, std::decay_t<resolver_type<Value>>>),
-				  "T must be \"resolver_type\" or \"resolver_noarg_type\"");
+template <typename Value = toml::value>
+void register_resolver(std::string const& resolver_name,
+					   std::decay_t<resolver_type<Value>> const& func) {
 	if (resolver_name.empty()) {
 		throw std::runtime_error("tomlex::register_resolver: empty resolver_type name");
 	}
@@ -120,6 +113,7 @@ void clear_resolver(std::string const& func_name) {
 
 template <typename Value = toml::value>
 Value merge(Value&& base, Value&& overwrite) {
+	// note: array is overwritten by "overwrite" obj
 	if (!base.is_table()) {
 		std::ostringstream msg;
 		msg << "tomlex::merge: following value must be a table, but " << base.type() << std::endl
@@ -153,15 +147,15 @@ Value merge(Value&& base, Value&& overwrite) {
 		}
 		base[key] = std::move(value);
 	}
-	return base;
+	return std::move(base);
 }
 
 template <typename Value = toml::value>
 Value from_dotted_keys(std::vector<std::string> const& key_list) {
-	Value ret = Value::table_type();
+	typename Value::table_type ret;
 	for (const auto& key : key_list) {
 		toml::detail::location loc(key, key);
-		ret = merge(std::move(ret), detail::parse_toml_literal<Value>(loc));
+		ret = merge(std::move(toml::value(ret)), detail::parse_toml_literal<Value>(loc)).as_table();
 	}
 	return ret;
 }
@@ -243,15 +237,6 @@ Value interp(std::string_view dst, Value const& root_,
 	return result;
 }
 
-// 前準備。 渡された(ラムダ式等の)関数オブジェクトをオーバーロード状にするやつ
-template <class... Ts>
-struct overloaded : Ts... {
-	using Ts::operator()...;
-};
-//型推論のためのおまじない
-template <class... Ts>
-overloaded(Ts...) -> overloaded<Ts...>;
-
 template <typename Value>
 Value apply_custom_resolver(std::string_view resolver_name, std::string_view arr_str,
 							Value const& root_, std::unordered_set<std::string>& interpolating_) {
@@ -260,22 +245,13 @@ Value apply_custom_resolver(std::string_view resolver_name, std::string_view arr
 	}
 	std::string key(resolver_name);
 	if (auto it = resolver_table<Value>.find(key); it != resolver_table<Value>.end()) {
-		// resolver_type<Value> func = it->second;
-		Value result = std::visit(
-			overloaded{[&arr_str](resolver_type<Value> func) {
-						   return func(to_toml_value<Value>(std::string(arr_str)));
-					   },
-					   [&arr_str, &resolver_name](resolver_noarg_type<Value> func) {
-						   if (!arr_str.empty()) {
-							   std::cerr << "tomlex::detail::apply_custom_resolver: resolver \""
-										 << resolver_name
-										 << "\": following arguments are not used : \"" << arr_str
-										 << "\"" << std::endl;
-						   }
-						   return func();
-					   }},
-			it->second);
-		// Value result = func(std::move(arr));
+		resolver_type<Value> func = it->second;
+		Value result;
+		if (arr_str.empty()) {
+			result = func(Value{});
+		} else {
+			result = func(to_toml_value<Value>(std::string(arr_str)));
+		}
 		return resolve_impl(std::move(result), root_, interpolating_);
 	}  // namespace detail
 	std::ostringstream oss;
@@ -376,7 +352,6 @@ Value resolve_impl(Value&& val, Value const& root_,
 	}
 
 	bool dollar_found = false;
-	bool resolved = false;
 	int step_size = 0;
 	std::string value_str = std::move(val.as_string());
 	std::stack<std::pair<size_t, bool>> dist_left_bracket_st;
@@ -404,7 +379,6 @@ Value resolve_impl(Value&& val, Value const& root_,
 				if (!enable_eval) {
 					break;
 				}
-				resolved = true;
 				auto left = value_str.begin() + dist_left;
 				try {
 					auto evaluated =

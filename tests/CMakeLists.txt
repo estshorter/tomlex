@@ -18,7 +18,7 @@ target_link_libraries(tests gtest_main)
 target_compile_options(tests PRIVATE
     $<$<CXX_COMPILER_ID:GNU>:-Wall -Wextra>
     $<$<CXX_COMPILER_ID:Clang>:-Wall -Wextra>
-    $<$<CXX_COMPILER_ID:MSVC>:/W4 /utf-8 /Zc:__cplusplus /Zc:preprocessor>
+    $<$<CXX_COMPILER_ID:MSVC>:/W4 /source-charset:utf-8 /Zc:__cplusplus /Zc:preprocessor>
 )
 target_compile_features(tests PRIVATE cxx_std_17)
 
