@@ -71,10 +71,6 @@ template <typename Value>
 void resolve_impl(Value& val, Value const& root_, std::unordered_set<std::string>& interpolating_);
 template <typename Value>
 Value parse_toml_literal(toml::detail::location loc);
-// foward decl
-template <typename Value>
-Value resolve_impl(Value&& val, Value const& root_,
-				   std::unordered_set<std::string>& interpolating_);
 }  // namespace detail
 
 template <typename Value = toml::value>
