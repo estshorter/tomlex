@@ -213,10 +213,11 @@ TEST(TesttomlextTest, resolve) {
 }
 
 TEST(TesttomlextTest, from_cli) {
-	constexpr char const* const keys[] = {"job_id  =   'hoge'", "a.b.c.d  =  120", "float=1.2"};
-	auto cfg = tomlex::from_cli(3, keys, 0).as_table();
+	constexpr char const* const keys[] = {"job_id  =   'hoge'", "a.b.c.d  =  120", "a.b.c.e = 0",
+										  "float=1.2"};
+	auto cfg = tomlex::from_cli(4, keys, 0).as_table();
 	auto expect = R"(job_id='hoge'
-a={b={c={d=120}}}
+a={b={c={d=120, e=0}}}
 float=1.2)"_toml.as_table();
 	ASSERT_EQ(cfg, expect);
 	ASSERT_THROW(tomlex::from_cli(3, keys, 3).as_table(), std::runtime_error);
@@ -226,16 +227,13 @@ float=1.2)"_toml.as_table();
 }
 
 TEST(TesttomlextTest, merge) {
-	auto base = R"(val=1)"_toml.as_table();
-	ASSERT_EQ(base["val"].as_integer(), 1);
-	auto modified = R"(val=1000)"_toml.as_table();
-	ASSERT_EQ(modified["val"].as_integer(), 1000);
+	auto base =
+		tomlex::merge(R"({a.b=-100, a.c=-200, alpha.beta=10})"_toml, R"({a.b=1, a.c=2})"_toml);
+	ASSERT_EQ(base, R"({a.b=1, a.c=2, alpha.beta=10})"_toml);
 
-	base.merge(modified);
-	ASSERT_EQ(base["val"].as_integer(), 1);
-
-	modified.merge(std::move(base));
-	ASSERT_EQ(modified["val"].as_integer(), 1000);
+	auto a = R"(a=10)"_toml;
+	auto b = R"(a=10.0)"_toml;
+	ASSERT_THROW(tomlex::merge(std::move(a), std::move(b)), std::runtime_error);
 }
 
 TEST(TesttomlextTest, clear_resolver) {

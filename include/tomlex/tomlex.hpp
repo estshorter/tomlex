@@ -115,19 +115,51 @@ void clear_resolver(std::string const& func_name) {
 }
 
 template <typename Value = toml::value>
+Value merge(Value&& base, Value&& overwrite) {
+	if (!base.is_table()) {
+		std::ostringstream msg;
+		msg << "tomlex::merge: following value must be a table, but " << base.type() << std::endl
+			<< base;
+		throw std::runtime_error(msg.str());
+	}
+	if (!overwrite.is_table()) {
+		std::ostringstream msg;
+		msg << "tomlex::merge: following value must be a table, but " << overwrite.type()
+			<< std::endl
+			<< overwrite;
+		throw std::runtime_error(msg.str());
+	}
+	auto& base_t = base.as_table();
+	for (auto&& [key, value] : overwrite.as_table()) {
+		// contains
+		if (auto it = base_t.find(key); it != base_t.end()) {
+			auto& base_val = it->second;
+			if (base_val.type() != value.type()) {
+				std::ostringstream msg;
+				msg << "tomlex::merge: type mismatch " << base_val.type() << " and " << value.type()
+					<< std::endl
+					<< base << std::endl
+					<< value;
+				throw std::runtime_error(msg.str());
+			}
+			if (value.is_table()) {
+				base[key] = merge<Value>(std::move(it->second), std::move(value));
+				continue;
+			}
+		}
+		base[key] = std::move(value);
+	}
+	return base;
+}
+
+template <typename Value = toml::value>
 Value from_dotted_keys(std::vector<std::string> const& key_list) {
-	typename Value::table_type table;
+	Value ret = Value::table_type();
 	for (const auto& key : key_list) {
 		toml::detail::location loc(key, key);
-		auto val = detail::parse_toml_literal<Value>(loc);
-		if (!val.is_table()) {
-			std::ostringstream oss;
-			oss << "cannot recognize as a table: \"" << val << "\"";
-			throw std::runtime_error(oss.str());
-		}
-		table.merge(std::move(val.as_table()));
+		ret = merge(std::move(ret), detail::parse_toml_literal<Value>(loc));
 	}
-	return table;
+	return ret;
 }
 
 template <typename Value = toml::value>
@@ -151,9 +183,33 @@ Value parse(U&& filename) {
 }
 
 namespace detail {
+// foward decl
 template <typename Value>
 Value resolve_each(Value&& val, Value const& root_,
 				   std::unordered_set<std::string>& interpolating_);
+
+template <typename Value>
+toml::result<Value, std::string> parse_value_strict(toml::detail::location& loc);
+
+template <typename Value>
+Value to_toml_value(std::string const& str) {
+	if (str.empty()) {
+		throw std::runtime_error(
+			"tomlex::detail::to_toml_value: cannot convert empty string to toml::value");
+	}
+	toml::detail::location loc(str, str);
+	try {
+		const auto result = parse_value_strict<Value>(loc);
+		if (result.is_err()) {
+			// std::cout << result.as_err() << std::endl;
+			throw std::runtime_error(result.as_err());
+		}
+		return result.unwrap();
+	} catch (toml::syntax_error& e) {
+		// std::cout << e.what() << std::endl;
+		throw std::runtime_error(e.what());
+	}
+}
 
 template <typename Value>
 void resolve_impl(Value& val, Value const& root_, std::unordered_set<std::string>& interpolating_) {
@@ -245,30 +301,6 @@ Value apply_custom_resolver(std::string_view resolver_name, std::string_view arr
 	}
 	throw std::runtime_error(oss.str());
 }  // namespace tomlex
-
-// foward decl
-template <typename Value>
-toml::result<Value, std::string> parse_value_strict(toml::detail::location& loc);
-
-template <typename Value>
-Value to_toml_value(std::string const& str) {
-	if (str.empty()) {
-		throw std::runtime_error(
-			"tomlex::detail::to_toml_value: cannot convert empty string to toml::value");
-	}
-	toml::detail::location loc(str, str);
-	try {
-		const auto result = parse_value_strict<Value>(loc);
-		if (result.is_err()) {
-			// std::cout << result.as_err() << std::endl;
-			throw std::runtime_error(result.as_err());
-		}
-		return result.unwrap();
-	} catch (toml::syntax_error& e) {
-		// std::cout << e.what() << std::endl;
-		throw std::runtime_error(e.what());
-	}
-}
 
 template <typename Value>
 std::string to_string(Value const& val) {
