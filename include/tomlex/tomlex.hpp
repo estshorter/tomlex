@@ -68,7 +68,8 @@ inline std::string_view trim(std::string_view s, const char* t = ws) {
 // foward decl
 namespace detail {
 template <typename Value>
-void resolve_impl(Value& val, Value const& root_, std::unordered_set<std::string>& interpolating_);
+Value resolve_impl(Value&& val, Value const& root_,
+				   std::unordered_set<std::string>& interpolating_);
 template <typename Value>
 Value parse_toml_literal(toml::detail::location loc);
 }  // namespace detail
