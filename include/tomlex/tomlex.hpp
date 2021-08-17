@@ -196,9 +196,9 @@ Value parse(U&& filename) {
 /// <param name="cfg"></param>
 /// <returns></returns>
 template <typename Value = toml::value>
-std::string format(const toml::value& cfg) {
+std::string format(const toml::value& cfg, std::size_t w = 80u, int fprec = 6) {
 	std::string serialized =
-		toml::visit(detail::serializer::serializer_short<Value>(0, 6, false, true), cfg);
+		toml::visit(detail::serializer::serializer_short<Value>(w, fprec, false, true), cfg);
 	return std::string(tomlex::utils::rtrim(serialized));
 }
 

@@ -197,8 +197,8 @@ struct serializer_short {
 		// first, try to make it inline if none of the elements have a comment.
 		if (!this->has_comment_inside(v)) {
 			const auto inl = this->make_inline_array(v);
-			// if (inl.size() < this->width_ &&
-			if (std::find(inl.cbegin(), inl.cend(), '\n') == inl.cend()) {
+			if (inl.size() < this->width_ &&
+				std::find(inl.cbegin(), inl.cend(), '\n') == inl.cend()) {
 				return inl;
 			}
 		}
@@ -296,10 +296,11 @@ struct serializer_short {
 				token += " = ";
 			}
 			token += this->make_inline_table(v);
-			if (token.size() < this->width_ &&
-				token.end() == std::find(token.begin(), token.end(), '\n')) {
-				return token;
-			}
+			//テーブルはインライン化しない
+			//if (token.size() < this->width_ &&
+			//	token.end() == std::find(token.begin(), token.end(), '\n')) {
+			//	return token;
+			//}
 		}
 
 		std::string token;
