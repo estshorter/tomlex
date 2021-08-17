@@ -246,6 +246,10 @@ TEST(TesttomlextTest, merge) {
 	auto a = R"(a=10)"_toml;
 	auto b = R"(a=10.0)"_toml;
 	ASSERT_THROW(tomlex::merge(std::move(a), std::move(b)), std::runtime_error);
+
+	a = R"({a.b=-100, a.c=-200})"_toml;
+	b = R"({a.b=-100, a.d=-200})"_toml;
+	ASSERT_THROW(tomlex::merge(std::move(a), std::move(b), true), std::runtime_error);
 }
 
 TEST(TesttomlextTest, clear_resolver) {

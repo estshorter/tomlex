@@ -108,7 +108,7 @@ void clear_resolver(std::string const& func_name) {
 }
 
 template <typename Value = toml::value>
-Value merge(Value&& base, Value&& overwrite) {
+Value merge(Value&& base, Value&& overwrite, bool enable_strict_overrwrite = false) {
 	// note: array is overwritten by "overwrite" obj
 	if (!base.is_table()) {
 		std::ostringstream msg;
@@ -137,9 +137,19 @@ Value merge(Value&& base, Value&& overwrite) {
 				throw std::runtime_error(msg.str());
 			}
 			if (value.is_table()) {
-				base[key] = merge<Value>(std::move(it->second), std::move(value));
+				base[key] =
+					merge<Value>(std::move(it->second), std::move(value), enable_strict_overrwrite);
+				continue;
+			} else {
+				base[key] = std::move(value);
 				continue;
 			}
+		}
+		if (enable_strict_overrwrite) {
+			std::ostringstream msg;
+			msg << "tomlex::merge: following key does not exist in the base table: \"" << key
+				<< "\"";
+			throw std::runtime_error(msg.str());
 		}
 		base[key] = std::move(value);
 	}
