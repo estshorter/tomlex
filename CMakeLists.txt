@@ -5,5 +5,6 @@ project(tomlex VERSION 0.0.0)
 option(tomlex_BUILD_TEST "Build toml tests" OFF)
 
 if (tomlex_BUILD_TEST)
+    enable_testing()
     add_subdirectory(tests)
 endif ()
