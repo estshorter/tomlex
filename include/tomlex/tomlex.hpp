@@ -12,6 +12,8 @@
 #include <unordered_set>
 #include <vector>
 
+#include "serializer.hpp"
+
 namespace tomlex {
 namespace utils {
 // https://stackoverflow.com/questions/3418231/replace-part-of-a-string-with-another-string
@@ -184,6 +186,20 @@ Value resolve(Value&& root_) {
 template <typename Value = toml::value, typename U>
 Value parse(U&& filename) {
 	return tomlex::resolve<Value>(toml::parse(std::forward<U>(filename)));
+}
+
+/// <summary>
+/// toml11の"<<"演算子を参考に、少ない行数で表示できるよう修正した。
+/// コメントは表示しない。
+/// </summary>
+/// <typeparam name="Value"></typeparam>
+/// <param name="cfg"></param>
+/// <returns></returns>
+template <typename Value = toml::value>
+std::string format(const toml::value& cfg) {
+	std::string serialized =
+		toml::visit(detail::serializer::serializer_short<Value>(0, 6, false, true), cfg);
+	return std::string(tomlex::utils::rtrim(serialized));
 }
 
 namespace detail {
