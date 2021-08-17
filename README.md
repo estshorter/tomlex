@@ -28,7 +28,7 @@ int main(void) {
 	interp2 = "${a.b.c.d}"      # 10
 	resolver = "${plus_10: 90}" # 100
 	[a.b.c]
-	d = 10
+	d = 10.0
 	*/
 	tomlex::register_resolver("plus_10", plus_10);
 	constexpr auto filename = "example.toml";
@@ -42,7 +42,7 @@ int main(void) {
 	constexpr int argc = 3;
 	constexpr char* argv[argc] = {"PROGRAM_PATH", "  param   =   10000  ", "a.b.c.d  =  nan"};
 	toml::value cfg_cli = tomlex::from_cli(argc, argv);
-	cfg = tomlex::merge(cfg, cfg_cli);  // data except for param and a.b.c.d are merged into cfg_cli
+	cfg = tomlex::merge(cfg, cfg_cli, true);  // data except for param and a.b.c.d are merged into cfg_cli
 	cout << cfg_cli << endl;
 
 	tomlex::clear_resolvers();
