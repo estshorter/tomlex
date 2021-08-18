@@ -293,34 +293,11 @@ std::string to_string(Value const& val) {
 		return val.as_string();
 	}
 
-	if (val.is_array()) {
-		oss << '[';
-		for (auto const& item : val.as_array()) {
-			oss << to_string<Value>(item) << ',';
-		}
-		oss.seekp(-1, oss.cur);
-		oss << ']';
-		return oss.str();
-	}
-	if (val.is_table()) {
-		oss << '{';
-		for (auto const& [k, v] : val.as_table()) {
-			oss << to_string<Value>(k) << "=" << to_string<Value>(v) << ',';
-		}
-		oss.seekp(-1, oss.cur);
-		oss << '}';
-		return oss.str();
-	}
-	oss << val;
-	auto ret = oss.str();
-
-	// if (val.is_floating()) {
-	//	auto val_float = (val.as_floating());
-	//	if (std::isnan(val_float) || std::isinf(val_float)) {
-	//		ret.erase(ret.size() - 2, 2);  // remvoe ".0" from "nan.0" and "inf.0"
-	//	}
-	//}
-	return ret;
+	oss << toml::visit(
+		toml::serializer<Value>((std::numeric_limits<std::size_t>::max)(),
+								std::numeric_limits<toml::floating>::max_digits10, true, true),
+		val);
+	return oss.str();
 }
 
 template <typename Value>

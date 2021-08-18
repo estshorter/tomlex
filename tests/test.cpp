@@ -106,6 +106,13 @@ text = [0, 1, 2]
 	result = find_from_root(cfg, "arr_tbl");
 	expected = R"([{ int = 12 }, {name="estshorter"}])"_toml;
 	EXPECT_EQ(result, expected);
+
+	result = find_from_root(cfg, "resolver6");
+	EXPECT_EQ(result, R"([[resolvers]]
+text = 1
+[[resolvers]]
+text = [0, 1, 2]
+)"_toml.as_table()["resolvers"]);
 }
 
 TEST_F(TesttomlextGoodTest, resolver_interp) {
@@ -221,7 +228,7 @@ TEST_F(TesttomlextBadTest, bad) {
 TEST(TesttomlextTest, resolve) {
 	auto cfg = R"(d='${no_op:["${concat: ["A","B","C"]}", "D"]}')"_toml;
 	cfg = tomlex::resolve(std::move(cfg));
-	ASSERT_EQ(tomlex::detail::to_string(cfg), R"({d=[ABC,D]})");
+	ASSERT_EQ(tomlex::detail::to_string(cfg), R"({d=["ABC","D"]})");
 }
 
 TEST(TesttomlextTest, from_cli) {
