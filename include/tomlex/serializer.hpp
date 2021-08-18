@@ -289,6 +289,7 @@ struct serializer_short {
 	std::string operator()(const table_type& v) const {
 		// if an element has a comment, then it can't be inlined.
 		// table = {# how can we write a comment for this? key = "value"}
+		/*
 		if (this->can_be_inlined_ && !(this->has_comment_inside(v))) {
 			std::string token;
 			if (!this->keys_.empty()) {
@@ -296,12 +297,13 @@ struct serializer_short {
 				token += " = ";
 			}
 			token += this->make_inline_table(v);
-			//ƒe[ƒuƒ‹‚ÍƒCƒ“ƒ‰ƒCƒ“‰»‚µ‚È‚¢
+			//ãƒ†ãƒ¼ãƒ–ãƒ«ã¯ã‚¤ãƒ³ãƒ©ã‚¤ãƒ³åŒ–ã—ãªã„
 			//if (token.size() < this->width_ &&
 			//	token.end() == std::find(token.begin(), token.end(), '\n')) {
 			//	return token;
 			//}
 		}
+		*/
 
 		std::string token;
 		auto [token_tmp, cnt_non_table] = this->make_multiline_table(v);
