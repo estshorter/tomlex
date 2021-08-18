@@ -1,6 +1,4 @@
 #pragma once
-#include <toml.hpp>
-
 #include "tomlex.hpp"
 
 namespace tomlex {
