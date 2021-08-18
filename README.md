@@ -86,7 +86,7 @@ bar = "${param}0" # "100": string, NOT int
 Examples:
 ```cpp
 //function definition
-toml::value join(toml::value && args, std::string & sep = "_") {
+toml::value join(toml::value && args, const std::string & sep = "_") {
     switch (args.type()) {
         case toml::value_t::array: {
             auto& array_ = args.as_array();
