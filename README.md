@@ -25,7 +25,7 @@ int main(void) {
 	/* example.toml
 	param = 9
 	interp1 = "${param}"        # 9
-	interp2 = "${a.b.c.d}"      # 10
+	interp2 = "${a.b.c.d}"      # 10.0
 	resolver = "${plus_10: 90}" # 100
 	[a.b.c]
 	d = 10.0
