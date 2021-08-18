@@ -33,7 +33,7 @@ int main(void) {
 	tomlex::register_resolver("plus_10", plus_10);
 	constexpr auto filename = "example.toml";
 	toml::value cfg = tomlex::parse(filename);
-	cout << cfg << endl;
+	cout << std::setw(80) << cfg << endl;
 
 	//This also works
 	//toml::value cfg = toml::parse(filename);
