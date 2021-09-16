@@ -142,7 +142,7 @@ ex2 = "${no_op: 7.0}0" # "7.00": string
 #### resolvers in the library
 `tomlex/resolver.hpp` provides two resolvers: `tomlex::resolvers::decode` and `tomlex::resolvers::env`.
 
-`decode` interprets an argument and as a toml value returns it only if the argument is string.
+`decode` interprets an argument as a toml value and returns it only if the argument is string.
 `env` returns an specified environment-variable.
 
 Note that these functions are not registered by default.
