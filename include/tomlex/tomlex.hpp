@@ -17,7 +17,7 @@
 namespace tomlex {
 namespace utils {
 // https://stackoverflow.com/questions/3418231/replace-part-of-a-string-with-another-string
-void replace_all(std::string& str, const std::string& from, const std::string& to) {
+inline void replace_all(std::string& str, const std::string& from, const std::string& to) {
 	if (from.empty()) return;
 	size_t start_pos = 0;
 	while ((start_pos = str.find(from, start_pos)) != std::string::npos) {
@@ -319,7 +319,7 @@ Value evaluate(std::string_view expr, Value const& root_,
 	return evaluated;
 }
 
-int calc_charsize(unsigned char const lead) {
+inline int calc_charsize(unsigned char const lead) {
 	if (lead < 0x80) {
 		return 1;
 	}
